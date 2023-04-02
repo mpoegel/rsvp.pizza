@@ -8,6 +8,7 @@ rsvp.pizza
 .env
 credentials.json
 token.json
+configs/*.yaml
 
 # Test binary, built with `go test -c`
 *.test
@@ -17,3 +18,5 @@ token.json
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+dist/
