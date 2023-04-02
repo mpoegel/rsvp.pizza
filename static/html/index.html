@@ -1,0 +1,26 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+    <h2>RSVP For Pizza</h2>
+
+    <form method="get" action="/submit">
+        {{range .FridayTimes}}
+        <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}">
+        <label for="{{.Date}}">{{.Date}}</label><br>
+        {{else}}
+        <p>There are no upcoming pizza fridays.</p>
+        {{end}}
+        <label for="email">Email</label>
+        <input type="text" id="email" name="email" />
+
+        <br>
+        <input type="submit" value="Submit">
+    </form>
+
+</body>
+
+</html>

@@ -4,6 +4,10 @@
 *.dll
 *.so
 *.dylib
+rsvp.pizza
+.env
+credentials.json
+token.json
 
 # Test binary, built with `go test -c`
 *.test
