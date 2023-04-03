@@ -3,7 +3,7 @@ before:
     - go mod tidy
 builds:
   - main: main.go
-    id: pizza_app
+    id: rsvp_pizza
     env:
       - CGO_ENABLED=0
     goos:
@@ -23,7 +23,7 @@ archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
-      {{ .ProjectName }}_
+      {{ .id }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
