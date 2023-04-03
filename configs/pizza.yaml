@@ -1,0 +1,8 @@
+port: 1995
+readTimeout: 2s
+writeTimeout: 2s
+shutdownTimeout: 3s
+calendar:
+  credentialFile: /etc/pizza/credentials.json
+  tokenFile: /etc/pizza/token.json
+  id: mycalendarid
