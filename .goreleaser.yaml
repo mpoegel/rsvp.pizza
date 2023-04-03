@@ -3,7 +3,7 @@ before:
     - go mod tidy
 builds:
   - main: main.go
-    id: rsvp.pizza
+    id: pizza_app
     env:
       - CGO_ENABLED=0
     goos:
