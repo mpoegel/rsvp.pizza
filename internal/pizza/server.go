@@ -25,6 +25,7 @@ func NewServer(config Config) (Server, error) {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HandleIndex)
 	r.HandleFunc("/submit", HandleSubmit)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
 
 	return Server{
 		s: http.Server{

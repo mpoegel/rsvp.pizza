@@ -1,0 +1,48 @@
+body {
+    background-color: darkblue;
+    font-family: 'Courier New', Courier, monospace;
+    color: white;
+    margin: auto;
+    padding: 20px;
+}
+
+#email {
+    margin: 20px 0;
+}
+
+#submit {
+    width: 100px;
+    margin: auto;
+}
+
+#submit input {
+    width: 100px;
+}
+
+@media (max-width: 600px) {
+    body {
+        font-size: 1.5em;
+        width: 100%;
+    }
+
+    #submit {
+        margin-top: 50px;
+        width: 150px;
+    }
+
+    #submit input {
+        width: 150px;
+        font-size: 1.1em;
+    }
+}
+
+@media (min-width: 601px) {
+    body {
+        font-size: 1.0em;
+        width: 600px;
+    }
+
+    #submit {
+        margin-left: 0px;
+    }
+}
