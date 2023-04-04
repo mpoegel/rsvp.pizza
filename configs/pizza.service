@@ -1,4 +1,4 @@
-Unit]
+[Unit]
 Description=RSVP Pizza
 Wants=network-online.target
 After=network-online.target
@@ -10,8 +10,8 @@ Group=pizza
 Type=simple
 Restart=always
 RestartSec=1
-Environmentfile=/etc/pizza/.env.prod
-ExecStart=/usr/local/bin/rsvp.pizza -config /etc/pizza/pizza.yaml
+EnvironmentFile=/etc/pizza/.env.prod
+ExecStart=/usr/local/bin/rsvp.pizza -config /etc/pizza/pizza.prod.yaml
 
 [Install]
 WantedBy=multi-user.target

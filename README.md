@@ -46,12 +46,16 @@ sudo adduser pizza
 ```sh
 sudo tar xzfv rsvp.pizza_Linux_x86_64.tar.gz -C /
 ```
-4. Adjust the environment variables.
+4. Adjust the environment variables and config file.
 ```sh
-sudo vim /etc/pizza/.env
+cp /etc/pizza/.env /etc/pizza/.env.prod
+cp /etc/pizza/pizza.yaml /etc/pizza/pizza.prod.yaml
+sudo vim /etc/pizza/.env.prod
+sudo vim /etc/pizza/pizza.prod.yaml
 ```
 5. Adjust the nginx config.
 ```sh
+cp /etc/pizza/nginx.conf /etc/nginx/sites-available/pizza.conf
 sudo vim /etc/nginx/sites-available/pizza.conf
 sudo ln -s /etc/nginx/sites-available/pizza.conf /etc/nginx/sites-enabled/pizza.conf
 sudo systemctl reload nginx
