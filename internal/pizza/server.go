@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -114,6 +115,7 @@ func HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		Handle4xx(w, r)
 		return
 	}
+	email = strings.ToLower(email)
 	Log.Debug("rsvp request", zap.String("email", email), zap.Strings("dates", dates))
 
 	if ok, err := IsFriendAllowed(email); !ok {

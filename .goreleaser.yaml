@@ -4,7 +4,7 @@ before:
 builds:
   - main: main.go
     id: rsvp_pizza
-    binary: usr/bin/local/rsvp.pizza
+    binary: usr/local/bin/rsvp.pizza
     env:
       - CGO_ENABLED=0
     goos:
@@ -13,7 +13,7 @@ builds:
       - amd64
   - main: cmd/renew_calendar_credentials.go
     id: renew_calendar_credentials
-    binary: usr/bin/local/renew_calendar_credentials
+    binary: usr/local/bin/renew_calendar_credentials
     env:
       - CGO_ENABLED=0
     goos:
