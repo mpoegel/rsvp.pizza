@@ -1,6 +1,7 @@
 package pizza
 
 import (
+	"strconv"
 	"time"
 
 	f "github.com/fauna/faunadb-go/v4/faunadb"
@@ -8,9 +9,12 @@ import (
 )
 
 var faunaClient *f.FaunaClient
+var fridayCache *Cache[[]time.Time]
 
-func newFaunaClient(secret string) {
+func newFaunaClient(secret string, cacheTTL time.Duration) {
 	faunaClient = f.NewFaunaClient(secret)
+	fcache := NewCache(cacheTTL, GetUpcomingFridaysStr)
+	fridayCache = &fcache
 }
 
 func IsFriendAllowed(friendEmail string) (bool, error) {
@@ -62,6 +66,18 @@ func GetAllFridays() ([]time.Time, error) {
 	}
 	Log.Debug("got all fridays", zap.Times("fridays", arr))
 	return arr, nil
+}
+
+func GetCachedFridays(daysAhead int) ([]time.Time, error) {
+	return fridayCache.Get(strconv.Itoa(daysAhead))
+}
+
+func GetUpcomingFridaysStr(daysAhead string) ([]time.Time, error) {
+	days, err := strconv.ParseInt(daysAhead, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	return GetUpcomingFridays(int(days))
 }
 
 func GetUpcomingFridays(daysAhead int) ([]time.Time, error) {

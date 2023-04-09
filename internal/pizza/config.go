@@ -19,7 +19,7 @@ func init() {
 	}
 
 	if faunaSecret := os.Getenv("FAUNADB_SECRET"); len(faunaSecret) > 0 {
-		newFaunaClient(faunaSecret)
+		newFaunaClient(faunaSecret, 1*time.Hour)
 	} else {
 		panic("no FAUNADB_SECRET found")
 	}

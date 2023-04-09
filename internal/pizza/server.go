@@ -71,7 +71,7 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	data := PageData{}
 
-	fridays, err := GetUpcomingFridays(30)
+	fridays, err := GetCachedFridays(30)
 	if err != nil {
 		Log.Error("failed to get fridays", zap.Error(err))
 		Handle500(w, r)
