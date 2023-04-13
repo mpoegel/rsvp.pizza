@@ -40,6 +40,9 @@ func NewServer(config Config) (Server, error) {
 }
 
 func (s *Server) Start() error {
+	// watch the calendar to keep credentials renewed and learn when they have expired
+	go s.WatchCalendar(1 * time.Hour)
+	// start the HTTP server
 	if err := s.s.ListenAndServe(); err != http.ErrServerClosed {
 		Log.Error("http listen error", zap.Error(err))
 		return err
@@ -51,6 +54,19 @@ func (s *Server) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.ShutdownTimeout)
 	defer cancel()
 	s.s.Shutdown(ctx)
+}
+
+func (s *Server) WatchCalendar(period time.Duration) {
+	timer := time.NewTimer(period)
+	for {
+		if _, err := ListEvents(1); err != nil {
+			Log.Warn("failed to list calendar events", zap.Error(err))
+		} else {
+			Log.Debug("calendar credentials are valid")
+		}
+		<-timer.C
+		timer.Reset(period)
+	}
 }
 
 type IndexFridayData struct {

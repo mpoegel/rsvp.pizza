@@ -100,3 +100,16 @@ func InviteToCalendarEvent(eventID string, start, end time.Time, name, email str
 	// TODO add timeout
 	return cal.srv.Events.Update(cal.id, eventID, event).Do()
 }
+
+func ListEvents(numEvents int64) (*calendar.Events, error) {
+	t := time.Now().Format(time.RFC3339)
+	// TODO add timeout
+	events, err := cal.srv.Events.List(cal.id).
+		ShowDeleted(false).
+		SingleEvents(true).
+		TimeMin(t).
+		MaxResults(numEvents).
+		OrderBy("startTime").
+		Do()
+	return events, err
+}
