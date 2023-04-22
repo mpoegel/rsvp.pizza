@@ -154,7 +154,7 @@ func HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		pendingDates[i] = time.Unix(num, 0)
 
-		friendName, err := GetFriendName(email)
+		friendName, err := GetCachedFriendName(email)
 		if err != nil {
 			Log.Error("could not get friend name", zap.Error(err), zap.String("email", email))
 			Handle500(w, r)

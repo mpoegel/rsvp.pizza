@@ -10,14 +10,26 @@ import (
 
 var faunaClient *f.FaunaClient
 var fridayCache *Cache[[]time.Time]
+var positiveFriendCache *Cache[string]
+var negativeFriendCache *Cache[bool]
 
 func newFaunaClient(secret string, cacheTTL time.Duration) {
 	faunaClient = f.NewFaunaClient(secret)
 	fcache := NewCache(cacheTTL, GetUpcomingFridaysStr)
 	fridayCache = &fcache
+	posFriendCache := NewCache(24*time.Hour, GetFriendName)
+	positiveFriendCache = &posFriendCache
+	negFriendCache := NewCache[bool](5*time.Minute, nil)
+	negativeFriendCache = &negFriendCache
 }
 
 func IsFriendAllowed(friendEmail string) (bool, error) {
+	if negativeFriendCache.Has(friendEmail) {
+		return false, nil
+	}
+	if positiveFriendCache.Has(friendEmail) {
+		return true, nil
+	}
 	qRes, err := faunaClient.Query(
 		f.Exists(f.MatchTerm(f.Index("all_emails"), friendEmail)),
 	)
@@ -30,7 +42,14 @@ func IsFriendAllowed(friendEmail string) (bool, error) {
 		Log.Error("fauna parse error", zap.Error(err))
 		return false, err
 	}
+	if !exists {
+		negativeFriendCache.Store(friendEmail, false)
+	}
 	return exists, nil
+}
+
+func GetCachedFriendName(friendEmail string) (string, error) {
+	return positiveFriendCache.Get(friendEmail)
 }
 
 func GetFriendName(friendEmail string) (string, error) {

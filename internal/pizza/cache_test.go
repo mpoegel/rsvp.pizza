@@ -33,3 +33,21 @@ func TestCacheGet(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, data, vals)
 }
+
+func TestCacheStore(t *testing.T) {
+	// GIVEN
+	data := 42
+	cache := pizza.NewCache[int](100*time.Millisecond, nil)
+
+	// WHEN
+	_, err := cache.Get("foo")
+
+	// THEN
+	assert.NotNil(t, err)
+
+	// WHEN
+	cache.Store("foo", data)
+	val, err := cache.Get("foo")
+	assert.Nil(t, err)
+	assert.Equal(t, data, val)
+}
