@@ -70,8 +70,9 @@ func (s *Server) WatchCalendar(period time.Duration) {
 }
 
 type IndexFridayData struct {
-	Date string
-	ID   int64
+	Date   string
+	ID     int64
+	Guests []int
 }
 
 type PageData struct {
@@ -100,6 +101,16 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 		t = t.In(estZone)
 		data.FridayTimes[i].Date = t.Format(time.RFC822)
 		data.FridayTimes[i].ID = t.Unix()
+
+		eventID := strconv.FormatInt(data.FridayTimes[i].ID, 10)
+		if event, err := GetCalendarEvent(eventID); event != nil {
+			data.FridayTimes[i].Guests = make([]int, len(event.Attendees))
+		} else if err != nil {
+			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
+			data.FridayTimes[i].Guests = make([]int, 0)
+		} else {
+			data.FridayTimes[i].Guests = make([]int, 0)
+		}
 	}
 
 	if err = plate.Execute(w, data); err != nil {

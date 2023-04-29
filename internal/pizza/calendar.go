@@ -14,8 +14,9 @@ import (
 )
 
 type Calendar struct {
-	srv *calendar.Service
-	id  string
+	srv        *calendar.Service
+	id         string
+	eventCache map[string]*calendar.Event
 }
 
 var cal *Calendar
@@ -43,7 +44,7 @@ func InitCalendarClient(credentialFile, tokenFile, id string, ctx context.Contex
 	if srv, err := calendar.NewService(ctx, option.WithHTTPClient(client)); err != nil {
 		return err
 	} else {
-		cal = &Calendar{srv, id}
+		cal = &Calendar{srv, id, make(map[string]*calendar.Event)}
 		return nil
 	}
 }
@@ -78,7 +79,18 @@ func CreateCalendarEvent(eventID string, start, end time.Time) (*calendar.Event,
 
 func GetCalendarEvent(eventID string) (*calendar.Event, error) {
 	// TODO add timeout
-	return cal.srv.Events.Get(cal.id, eventID).Do()
+	if event, ok := cal.eventCache[eventID]; ok {
+		return event, nil
+	}
+	if event, err := cal.srv.Events.Get(cal.id, eventID).Do(); err == nil {
+		cal.eventCache[eventID] = event
+		return event, nil
+	} else if err != nil && err.Error() == "googleapi: Error 404: Not Found, notFound" {
+		cal.eventCache[eventID] = nil
+		return nil, nil
+	} else {
+		return nil, err
+	}
 }
 
 func InviteToCalendarEvent(eventID string, start, end time.Time, name, email string) (*calendar.Event, error) {
@@ -98,7 +110,11 @@ func InviteToCalendarEvent(eventID string, start, end time.Time, name, email str
 		Email:       email,
 	})
 	// TODO add timeout
-	return cal.srv.Events.Update(cal.id, eventID, event).Do()
+	event, err = cal.srv.Events.Update(cal.id, eventID, event).Do()
+	if err != nil {
+		cal.eventCache[eventID] = event
+	}
+	return event, err
 }
 
 func ListEvents(numEvents int64) (*calendar.Events, error) {

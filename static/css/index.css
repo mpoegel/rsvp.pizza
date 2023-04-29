@@ -19,6 +19,22 @@ body {
     width: 100px;
 }
 
+.guestLevel {
+    text-align: right;
+    width: 50%;
+}
+
+.guest {
+    white-space: pre;
+    min-width: 10px;
+    min-height: 3px;
+    height: 10px;
+    padding: 3px 3px;
+    background-color: darkgreen;
+    display: inline-block;
+    margin: 1px;
+}
+
 @media (max-width: 600px) {
     body {
         font-size: 1.5em;
@@ -33,6 +49,10 @@ body {
     #submit input {
         width: 150px;
         font-size: 1.1em;
+    }
+
+    .guestLevel {
+        width: 80%;
     }
 }
 
