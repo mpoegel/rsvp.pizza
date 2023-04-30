@@ -106,7 +106,7 @@ func GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 				Range(
 					Match(Index("all_fridays_range")),
 					Now(),
-					TimeAdd(Now(), 30, "days")
+					TimeAdd(TimeAdd(Now(), 1, "day"), 30, "days")
 				)
 			),
 			Lambda('x', Select(0, Var('x')))
@@ -115,7 +115,7 @@ func GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 	qRes, err := faunaClient.Query(f.Map(f.Paginate(f.Range(
 		f.Match(f.Index("all_fridays_range")),
 		f.Now(),
-		f.TimeAdd(f.Now(), daysAhead, "days"),
+		f.TimeAdd(f.TimeAdd(f.Now(), 1, "days"), daysAhead, "days"),
 	)), f.Lambda("x", f.Select(0, f.Var("x")))))
 	if err != nil {
 		Log.Error("fauna error", zap.Error(err))
