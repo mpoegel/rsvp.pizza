@@ -97,6 +97,9 @@ func InviteToCalendarEvent(eventID string, start, end time.Time, name, email str
 	// TODO add locks
 	event, err := GetCalendarEvent(eventID)
 	if err != nil {
+		return nil, err
+	}
+	if event == nil {
 		Log.Info("event does not exist, creating new", zap.String("eventID", eventID))
 		event, err = CreateCalendarEvent(eventID, start, end)
 		if err != nil {
@@ -104,17 +107,18 @@ func InviteToCalendarEvent(eventID string, start, end time.Time, name, email str
 			return nil, err
 		}
 		Log.Info("event created", zap.String("eventID", event.Id))
-	}
-	event.Attendees = append(event.Attendees, &calendar.EventAttendee{
-		DisplayName: name,
-		Email:       email,
-	})
-	// TODO add timeout
-	event, err = cal.srv.Events.Update(cal.id, eventID, event).Do()
-	if err != nil {
 		cal.eventCache[eventID] = event
 	}
-	return event, err
+
+	for _, attendee := range event.Attendees {
+		if attendee.Email == email {
+			Log.Info("already invited", zap.String("email", email), zap.String("eventID", eventID))
+			return event, nil
+		}
+	}
+
+	// TODO add timeout
+	return cal.srv.Events.Update(cal.id, eventID, event).Do()
 }
 
 func ListEvents(numEvents int64) (*calendar.Events, error) {
@@ -128,4 +132,18 @@ func ListEvents(numEvents int64) (*calendar.Events, error) {
 		OrderBy("startTime").
 		Do()
 	return events, err
+}
+
+func DeleteEvent(eventID string) error {
+	return cal.srv.Events.Delete(cal.id, eventID).Do()
+}
+
+func ActivateEvent(eventID string) error {
+	event, err := GetCalendarEvent(eventID)
+	if err != nil || event == nil {
+		return err
+	}
+	event.Status = "confirmed"
+	_, err = cal.srv.Events.Update(cal.id, eventID, event).Do()
+	return err
 }
