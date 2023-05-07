@@ -1,36 +1,24 @@
 package pizza
 
 import (
-	"strconv"
 	"time"
 
 	f "github.com/fauna/faunadb-go/v4/faunadb"
 	"go.uber.org/zap"
 )
 
-var faunaClient *f.FaunaClient
-var fridayCache *Cache[[]time.Time]
-var positiveFriendCache *Cache[string]
-var negativeFriendCache *Cache[bool]
-
-func newFaunaClient(secret string, cacheTTL time.Duration) {
-	faunaClient = f.NewFaunaClient(secret)
-	fcache := NewCache(cacheTTL, GetUpcomingFridaysStr)
-	fridayCache = &fcache
-	posFriendCache := NewCache(24*time.Hour, GetFriendName)
-	positiveFriendCache = &posFriendCache
-	negFriendCache := NewCache[bool](5*time.Minute, nil)
-	negativeFriendCache = &negFriendCache
+type FaunaClient struct {
+	fc *f.FaunaClient
 }
 
-func IsFriendAllowed(friendEmail string) (bool, error) {
-	if negativeFriendCache.Has(friendEmail) {
-		return false, nil
+func NewFaunaClient(secret string) *FaunaClient {
+	return &FaunaClient{
+		fc: f.NewFaunaClient(secret),
 	}
-	if positiveFriendCache.Has(friendEmail) {
-		return true, nil
-	}
-	qRes, err := faunaClient.Query(
+}
+
+func (c *FaunaClient) IsFriendAllowed(friendEmail string) (bool, error) {
+	qRes, err := c.fc.Query(
 		f.Exists(f.MatchTerm(f.Index("all_emails"), friendEmail)),
 	)
 	if err != nil {
@@ -42,17 +30,10 @@ func IsFriendAllowed(friendEmail string) (bool, error) {
 		Log.Error("fauna parse error", zap.Error(err))
 		return false, err
 	}
-	if !exists {
-		negativeFriendCache.Store(friendEmail, false)
-	}
 	return exists, nil
 }
 
-func GetCachedFriendName(friendEmail string) (string, error) {
-	return positiveFriendCache.Get(friendEmail)
-}
-
-func GetFriendName(friendEmail string) (string, error) {
+func (c *FaunaClient) GetFriendName(friendEmail string) (string, error) {
 	/*
 		Get(Select(
 			"ref",
@@ -60,7 +41,7 @@ func GetFriendName(friendEmail string) (string, error) {
 		))
 	*/
 	var name string
-	qRes, err := faunaClient.Query(f.Get(f.MatchTerm(f.Index("all_emails"), friendEmail)))
+	qRes, err := c.fc.Query(f.Get(f.MatchTerm(f.Index("all_emails"), friendEmail)))
 	if err != nil {
 		Log.Error("fauna error", zap.Error(err))
 		return name, err
@@ -72,8 +53,8 @@ func GetFriendName(friendEmail string) (string, error) {
 	return name, nil
 }
 
-func GetAllFridays() ([]time.Time, error) {
-	qRes, err := faunaClient.Query(f.Paginate(f.Match(f.Index("all_fridays"))))
+func (c *FaunaClient) GetAllFridays() ([]time.Time, error) {
+	qRes, err := c.fc.Query(f.Paginate(f.Match(f.Index("all_fridays"))))
 	if err != nil {
 		Log.Error("fauna error", zap.Error(err))
 		return nil, err
@@ -87,19 +68,7 @@ func GetAllFridays() ([]time.Time, error) {
 	return arr, nil
 }
 
-func GetCachedFridays(daysAhead int) ([]time.Time, error) {
-	return fridayCache.Get(strconv.Itoa(daysAhead))
-}
-
-func GetUpcomingFridaysStr(daysAhead string) ([]time.Time, error) {
-	days, err := strconv.ParseInt(daysAhead, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	return GetUpcomingFridays(int(days))
-}
-
-func GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
+func (c *FaunaClient) GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 	/*
 		Map(
 			Paginate(
@@ -112,7 +81,7 @@ func GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 			Lambda('x', Select(0, Var('x')))
 		)
 	*/
-	qRes, err := faunaClient.Query(f.Map(f.Paginate(f.Range(
+	qRes, err := c.fc.Query(f.Map(f.Paginate(f.Range(
 		f.Match(f.Index("all_fridays_range")),
 		f.Now(),
 		f.TimeAdd(f.TimeAdd(f.Now(), 1, "days"), daysAhead, "days"),
@@ -132,8 +101,8 @@ func GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 	return times, nil
 }
 
-func CreateRSVP(friendEmail, code string, pendingDates []time.Time) error {
-	qRes, err := faunaClient.Query(
+func (c *FaunaClient) CreateRSVP(friendEmail, code string, pendingDates []time.Time) error {
+	qRes, err := c.fc.Query(
 		f.Update(
 			f.Select(
 				"ref",
@@ -153,8 +122,8 @@ func CreateRSVP(friendEmail, code string, pendingDates []time.Time) error {
 	return nil
 }
 
-func ConfirmRSVP(friendEmail, code string) error {
-	qRes, err := faunaClient.Query(
+func (c *FaunaClient) ConfirmRSVP(friendEmail, code string) error {
+	qRes, err := c.fc.Query(
 		f.Let().Bind(
 			"pending", f.Select([]string{"data", "pending_rsvps"},
 				f.Get(f.MatchTerm(f.Index("rsvp_codes"), []string{friendEmail, code}))),

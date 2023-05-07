@@ -18,12 +18,6 @@ func init() {
 		panic(fmt.Sprintf("could not create logger: %v", err))
 	}
 
-	if faunaSecret := os.Getenv("FAUNADB_SECRET"); len(faunaSecret) > 0 {
-		newFaunaClient(faunaSecret, 1*time.Hour)
-	} else {
-		panic("no FAUNADB_SECRET found")
-	}
-
 	if val := os.Getenv("PIZZA_STATIC_DIR"); len(val) > 0 {
 		StaticDir = val
 	}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/mpoegel/rsvp.pizza/internal/pizza"
 )
@@ -14,7 +15,11 @@ import (
 func TestHandleIndex(t *testing.T) {
 	// GIVEN
 	pizza.StaticDir = "../../static"
-	ts := httptest.NewServer(http.HandlerFunc(pizza.HandleIndex))
+	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
+	require.Nil(t, err)
+	server, err := pizza.NewServer(config)
+	require.Nil(t, err)
+	ts := httptest.NewServer(http.HandlerFunc(server.HandleIndex))
 	defer ts.Close()
 
 	// WHEN
@@ -29,7 +34,11 @@ func TestHandleIndex(t *testing.T) {
 func TestHandleSubmit(t *testing.T) {
 	// GIVEN
 	pizza.StaticDir = "../../static"
-	ts := httptest.NewServer(http.HandlerFunc(pizza.HandleSubmit))
+	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
+	require.Nil(t, err)
+	server, err := pizza.NewServer(config)
+	require.Nil(t, err)
+	ts := httptest.NewServer(http.HandlerFunc(server.HandleSubmit))
 	defer ts.Close()
 	url := fmt.Sprintf("%s?date=1672060005&date=1672040005&email=popfizz@foo.com", ts.URL)
 

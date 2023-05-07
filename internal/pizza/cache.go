@@ -24,6 +24,14 @@ func NewCache[T any](ttl time.Duration, refreshFunc func(key string) (T, error))
 	}
 }
 
+func NewCache2[T any](ttl time.Duration, refreshFunc func(key string) (T, error)) *Cache[T] {
+	return &Cache[T]{
+		ttl:     ttl,
+		store:   make(map[string]CacheValue[T]),
+		refresh: refreshFunc,
+	}
+}
+
 func (c *Cache[T]) Get(key string) (T, error) {
 	v, ok := c.store[key]
 	if !ok || v.createdAt.Add(c.ttl).Before(time.Now()) {
@@ -44,7 +52,11 @@ func (c *Cache[T]) Get(key string) (T, error) {
 }
 
 func (c *Cache[T]) Has(key string) bool {
-	_, ok := c.store[key]
+	val, ok := c.store[key]
+	if ok && val.createdAt.Add(c.ttl).Before(time.Now()) {
+		// present but expired
+		return false
+	}
 	return ok
 }
 

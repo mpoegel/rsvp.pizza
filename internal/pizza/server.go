@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -19,24 +20,36 @@ var EventDuration = time.Hour * 4
 
 type Server struct {
 	s      http.Server
+	store  Store
 	config Config
 }
 
 func NewServer(config Config) (Server, error) {
 	r := mux.NewRouter()
-	r.HandleFunc("/", HandleIndex)
-	r.HandleFunc("/submit", HandleSubmit)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
 
-	return Server{
+	var accessor Accessor
+	if faunaSecret := os.Getenv("FAUNADB_SECRET"); len(faunaSecret) > 0 {
+		accessor = NewFaunaClient(faunaSecret)
+	} else {
+		panic("no FAUNADB_SECRET found")
+	}
+
+	s := Server{
 		s: http.Server{
 			Addr:         fmt.Sprintf("0.0.0.0:%d", config.Port),
 			ReadTimeout:  config.ReadTimeout,
 			WriteTimeout: config.WriteTimeout,
 			Handler:      r,
 		},
+		store:  NewStore(accessor),
 		config: config,
-	}, nil
+	}
+
+	r.HandleFunc("/", s.HandleIndex)
+	r.HandleFunc("/submit", s.HandleSubmit)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
+
+	return s, nil
 }
 
 func (s *Server) Start() error {
@@ -79,7 +92,7 @@ type PageData struct {
 	FridayTimes []IndexFridayData
 }
 
-func HandleIndex(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	plate, err := template.ParseFiles(path.Join(StaticDir, "html/index.html"))
 	if err != nil {
 		Log.Error("template index failure", zap.Error(err))
@@ -88,7 +101,7 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	data := PageData{}
 
-	fridays, err := GetCachedFridays(30)
+	fridays, err := s.store.GetUpcomingFridays(30)
 	if err != nil {
 		Log.Error("failed to get fridays", zap.Error(err))
 		Handle500(w, r)
@@ -120,7 +133,7 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HandleSubmit(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	plate, err := template.ParseFiles(path.Join(StaticDir, "html/submit.html"))
 	if err != nil {
 		Log.Error("template submit failure", zap.Error(err))
@@ -145,7 +158,7 @@ func HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	email = strings.ToLower(email)
 	Log.Debug("rsvp request", zap.String("email", email), zap.Strings("dates", dates))
 
-	if ok, err := IsFriendAllowed(email); !ok {
+	if ok, err := s.store.IsFriendAllowed(email); !ok {
 		if err != nil {
 			Log.Error("error checking email for rsvp request", zap.Error(err))
 			Handle500(w, r)
@@ -165,7 +178,7 @@ func HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		pendingDates[i] = time.Unix(num, 0)
 
-		friendName, err := GetCachedFriendName(email)
+		friendName, err := s.store.GetFriendName(email)
 		if err != nil {
 			Log.Error("could not get friend name", zap.Error(err), zap.String("email", email))
 			Handle500(w, r)
