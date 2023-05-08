@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 	"os/signal"
@@ -16,9 +15,6 @@ func main() {
 	config, err := pizza.LoadConfig(*configFile)
 	if err != nil {
 		pizza.Log.Fatal("could not load config", zap.Error(err))
-	}
-	if err := pizza.InitCalendarClient(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, context.Background()); err != nil {
-		pizza.Log.Fatal("failed to init calendar client", zap.Error(err))
 	}
 	server, err := pizza.NewServer(config)
 	if err != nil {

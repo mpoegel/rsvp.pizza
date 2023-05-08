@@ -19,9 +19,10 @@ var StaticDir = "static"
 var EventDuration = time.Hour * 4
 
 type Server struct {
-	s      http.Server
-	store  Store
-	config Config
+	s        http.Server
+	store    *Store
+	calendar *Calendar
+	config   Config
 }
 
 func NewServer(config Config) (Server, error) {
@@ -34,6 +35,11 @@ func NewServer(config Config) (Server, error) {
 		panic("no FAUNADB_SECRET found")
 	}
 
+	googleCal, err := NewGoogleCalendar(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, context.Background())
+	if err != nil {
+		panic("could not create google calendar client")
+	}
+
 	s := Server{
 		s: http.Server{
 			Addr:         fmt.Sprintf("0.0.0.0:%d", config.Port),
@@ -41,8 +47,9 @@ func NewServer(config Config) (Server, error) {
 			WriteTimeout: config.WriteTimeout,
 			Handler:      r,
 		},
-		store:  NewStore(accessor),
-		config: config,
+		store:    NewStore(accessor),
+		calendar: NewCalendar(googleCal),
+		config:   config,
 	}
 
 	r.HandleFunc("/", s.HandleIndex)
@@ -72,7 +79,7 @@ func (s *Server) Stop() {
 func (s *Server) WatchCalendar(period time.Duration) {
 	timer := time.NewTimer(period)
 	for {
-		if _, err := ListEvents(1); err != nil {
+		if _, err := s.calendar.ListEvents(1); err != nil {
 			Log.Warn("failed to list calendar events", zap.Error(err))
 		} else {
 			Log.Debug("calendar credentials are valid")
@@ -116,13 +123,13 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		data.FridayTimes[i].ID = t.Unix()
 
 		eventID := strconv.FormatInt(data.FridayTimes[i].ID, 10)
-		if event, err := GetCalendarEvent(eventID); event != nil {
-			data.FridayTimes[i].Guests = make([]int, len(event.Attendees))
-		} else if err != nil {
+		if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
 			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
 			data.FridayTimes[i].Guests = make([]int, 0)
-		} else {
+		} else if err != nil {
 			data.FridayTimes[i].Guests = make([]int, 0)
+		} else {
+			data.FridayTimes[i].Guests = make([]int, len(event.Attendees))
 		}
 	}
 
@@ -168,30 +175,55 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	friendName, err := s.store.GetFriendName(email)
+	if err != nil {
+		Log.Error("could not get friend name", zap.Error(err), zap.String("email", email))
+		Handle500(w, r)
+		return
+	}
+
+	newEvent := CalendarEvent{
+		AnyoneCanAddSelf:      false,
+		Description:           "Welcome to Pizza Friday!",
+		EndTime:               time.Now(),
+		GuestsCanInviteOthers: false,
+		GuestsCanModify:       false,
+		Id:                    "",
+		Locked:                true,
+		StartTime:             time.Now(),
+		Status:                "confirmed",
+		Summary:               "Pizza Friday",
+		Visibility:            "private",
+	}
+
 	pendingDates := make([]time.Time, len(dates))
 	for i, d := range dates {
 		num, err := strconv.ParseInt(d, 10, 64)
 		if err != nil {
-			Log.Error("error parsing date int from rsvp form", zap.String("date", d))
+			Log.Error("failed parsing date int from rsvp form", zap.String("date", d))
 			Handle500(w, r)
 			return
 		}
 		pendingDates[i] = time.Unix(num, 0)
+		newEvent.StartTime = pendingDates[i]
+		newEvent.EndTime = pendingDates[i].Add(time.Hour + 5)
+		newEvent.Id = d
 
-		friendName, err := s.store.GetFriendName(email)
-		if err != nil {
-			Log.Error("could not get friend name", zap.Error(err), zap.String("email", email))
-			Handle500(w, r)
-			return
+		err = s.calendar.InviteToEvent(d, email, friendName)
+		if err != nil && err == ErrEventNotFound {
+			if err = s.calendar.CreateEvent(newEvent); err != nil {
+				Log.Error("could not create event", zap.String("eventID", d), zap.String("email", email))
+				Handle500(w, r)
+				return
+			}
+			err = s.calendar.InviteToEvent(d, email, friendName)
 		}
-
-		event, err := InviteToCalendarEvent(d, pendingDates[i], pendingDates[i].Add(time.Hour+5), friendName, email)
 		if err != nil {
 			Log.Error("invite failed", zap.String("eventID", d), zap.String("email", email))
 			Handle500(w, r)
 			return
 		}
-		Log.Debug("event updated", zap.Any("event", event))
+		Log.Debug("event updated", zap.String("eventID", d), zap.String("email", email), zap.String("name", friendName))
 	}
 
 	if err = plate.Execute(w, data); err != nil {

@@ -24,8 +24,8 @@ type Store struct {
 	negativeFriendCache *Cache[bool]
 }
 
-func NewStore(accessor Accessor) Store {
-	return Store{
+func NewStore(accessor Accessor) *Store {
+	return &Store{
 		accessor:            accessor,
 		fridayCache:         nil,
 		friendNameCache:     nil,
