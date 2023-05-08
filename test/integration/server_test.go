@@ -50,11 +50,3 @@ func TestHandleSubmit(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	assert.NotNil(t, res)
 }
-
-func TestHandleConfirmation(t *testing.T) {
-	// GIVEN
-
-	// WHEN
-
-	// THEN
-}
