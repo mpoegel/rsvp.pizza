@@ -30,7 +30,7 @@ Before installing rsvp.pizza, you'll need to get OAuth2 credentials for the Goog
     "email": "believe@tedlasso.com"
 }
   ```
-3. Create an `all_emails` index that allows the friends collection to be search by email. Create an `all_fridays` index that returns all the dates in the fridays collection. Create `all_fridays_range` idnex that returns all the dates and refs in the fridays collection.
+3. Create an `all_emails` index that allows the friends collection to be search by email. Create an `all_fridays` index that returns all the dates in the fridays collection. Create `all_fridays_range` index that returns all the dates and refs in the fridays collection.
 4. Create and download a database access key for your database.
 
 ### Install the package
