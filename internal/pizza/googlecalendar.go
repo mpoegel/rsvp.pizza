@@ -167,6 +167,9 @@ func (c *GoogleCalendar) ListEvents(numEvents int) ([]CalendarEvent, error) {
 		MaxResults(int64(numEvents)).
 		OrderBy("startTime").
 		Do()
+	if err != nil {
+		return nil, err
+	}
 	result := make([]CalendarEvent, len(events.Items))
 	for i := range result {
 		result[i] = c.googleEventToEvent(events.Items[i])
