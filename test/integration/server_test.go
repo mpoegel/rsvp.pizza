@@ -17,7 +17,7 @@ func TestHandleIndex(t *testing.T) {
 	pizza.StaticDir = "../../static"
 	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
 	require.Nil(t, err)
-	server, err := pizza.NewServer(config)
+	server, err := pizza.NewServer(config, nil)
 	require.Nil(t, err)
 	ts := httptest.NewServer(http.HandlerFunc(server.HandleIndex))
 	defer ts.Close()
@@ -36,7 +36,7 @@ func TestHandleSubmit(t *testing.T) {
 	pizza.StaticDir = "../../static"
 	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
 	require.Nil(t, err)
-	server, err := pizza.NewServer(config)
+	server, err := pizza.NewServer(config, nil)
 	require.Nil(t, err)
 	ts := httptest.NewServer(http.HandlerFunc(server.HandleSubmit))
 	defer ts.Close()

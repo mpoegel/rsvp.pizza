@@ -16,7 +16,8 @@ func main() {
 	if err != nil {
 		pizza.Log.Fatal("could not load config", zap.Error(err))
 	}
-	server, err := pizza.NewServer(config)
+	metricsReg := pizza.NewPrometheusRegistry()
+	server, err := pizza.NewServer(config, metricsReg)
 	if err != nil {
 		pizza.Log.Fatal("could not create server", zap.Error(err))
 	}
@@ -28,6 +29,10 @@ func main() {
 		pizza.Log.Info("shutting down")
 		server.Stop()
 	}()
+
+	if config.MetricsPort != 0 {
+		go metricsReg.Serve(config.MetricsPort)
+	}
 
 	server.Start()
 }

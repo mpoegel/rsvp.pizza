@@ -29,6 +29,7 @@ type Config struct {
 	WriteTimeout    time.Duration  `yaml:"writeTimeout"`
 	ShutdownTimeout time.Duration  `yaml:"shutdownTimeout"`
 	Calendar        CalendarConfig `yaml:"calendar"`
+	MetricsPort     int            `yaml:"metricsPort"`
 }
 
 type CalendarConfig struct {

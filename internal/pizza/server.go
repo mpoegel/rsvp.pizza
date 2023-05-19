@@ -23,9 +23,14 @@ type Server struct {
 	store    *Store
 	calendar *Calendar
 	config   Config
+
+	indexGetMetric      CounterMetric
+	submitPostMetric    CounterMetric
+	requestErrorMetric  CounterMetric
+	internalErrorMetric CounterMetric
 }
 
-func NewServer(config Config) (Server, error) {
+func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	r := mux.NewRouter()
 
 	var accessor Accessor
@@ -50,6 +55,14 @@ func NewServer(config Config) (Server, error) {
 		store:    NewStore(accessor),
 		calendar: NewCalendar(googleCal),
 		config:   config,
+		indexGetMetric: metricsReg.NewCounterMetric("pizza_requests",
+			map[string]string{"method": "get", "path": "/"}),
+		submitPostMetric: metricsReg.NewCounterMetric("pizza_requests",
+			map[string]string{"method": "post", "path": "/submit"}),
+		requestErrorMetric: metricsReg.NewCounterMetric("pizza_errors",
+			map[string]string{"statusCode": "4xx"}),
+		internalErrorMetric: metricsReg.NewCounterMetric("pizza_errors",
+			map[string]string{"statusCode": "500"}),
 	}
 
 	r.HandleFunc("/", s.HandleIndex)
@@ -100,10 +113,11 @@ type PageData struct {
 }
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
+	s.indexGetMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(StaticDir, "html/index.html"))
 	if err != nil {
 		Log.Error("template index failure", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 	data := PageData{}
@@ -111,7 +125,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	fridays, err := s.store.GetUpcomingFridays(30)
 	if err != nil {
 		Log.Error("failed to get fridays", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 
@@ -135,16 +149,17 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 	if err = plate.Execute(w, data); err != nil {
 		Log.Error("template execution failure", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 }
 
 func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
+	s.submitPostMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(StaticDir, "html/submit.html"))
 	if err != nil {
 		Log.Error("template submit failure", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 	data := PageData{}
@@ -154,12 +169,12 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	form := r.URL.Query()
 	dates, ok := form["date"]
 	if !ok {
-		Handle4xx(w, r)
+		s.Handle4xx(w, r)
 		return
 	}
 	email := form.Get("email")
 	if len(email) == 0 {
-		Handle4xx(w, r)
+		s.Handle4xx(w, r)
 		return
 	}
 	email = strings.ToLower(email)
@@ -168,9 +183,9 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	if ok, err := s.store.IsFriendAllowed(email); !ok {
 		if err != nil {
 			Log.Error("error checking email for rsvp request", zap.Error(err))
-			Handle500(w, r)
+			s.Handle500(w, r)
 		} else {
-			Handle4xx(w, r)
+			s.Handle4xx(w, r)
 		}
 		return
 	}
@@ -178,7 +193,7 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	friendName, err := s.store.GetFriendName(email)
 	if err != nil {
 		Log.Error("could not get friend name", zap.Error(err), zap.String("email", email))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 
@@ -201,7 +216,7 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		num, err := strconv.ParseInt(d, 10, 64)
 		if err != nil {
 			Log.Error("failed parsing date int from rsvp form", zap.String("date", d))
-			Handle500(w, r)
+			s.Handle500(w, r)
 			return
 		}
 		pendingDates[i] = time.Unix(num, 0)
@@ -213,14 +228,14 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		if err != nil && err == ErrEventNotFound {
 			if err = s.calendar.CreateEvent(newEvent); err != nil {
 				Log.Error("could not create event", zap.String("eventID", d), zap.String("email", email))
-				Handle500(w, r)
+				s.Handle500(w, r)
 				return
 			}
 			err = s.calendar.InviteToEvent(d, email, friendName)
 		}
 		if err != nil {
 			Log.Error("invite failed", zap.String("eventID", d), zap.String("email", email))
-			Handle500(w, r)
+			s.Handle500(w, r)
 			return
 		}
 		Log.Debug("event updated", zap.String("eventID", d), zap.String("email", email), zap.String("name", friendName))
@@ -228,30 +243,32 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 
 	if err = plate.Execute(w, data); err != nil {
 		Log.Error("template execution failure", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 }
 
-func Handle4xx(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {
+	s.requestErrorMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(StaticDir, "html/4xx.html"))
 	if err != nil {
 		Log.Error("template 4xx failure", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 	data := PageData{}
 	if err = plate.Execute(w, data); err != nil {
 		Log.Error("template execution failure", zap.Error(err))
-		Handle500(w, r)
+		s.Handle500(w, r)
 		return
 	}
 }
 
-func Handle500(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Handle500(w http.ResponseWriter, r *http.Request) {
+	s.internalErrorMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(StaticDir, "html/500.html"))
 	if err != nil {
-		Log.Error("template 400 failure", zap.Error(err))
+		Log.Error("template 500 failure", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

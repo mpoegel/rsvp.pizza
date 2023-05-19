@@ -6,3 +6,4 @@ calendar:
   credentialFile: /etc/pizza/credentials.json
   tokenFile: /etc/pizza/token.json
   id: mycalendarid
+metricsPort: 1996
