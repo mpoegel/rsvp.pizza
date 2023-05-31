@@ -1,6 +1,6 @@
 # rsvp.pizza
 
-rsvp.pizza is a web application for collecting RSVP's to you pizza parties. Your friends can select the days they want to come and enter their email address to receive a Google Calendar invite to the party.
+rsvp.pizza is a web application for collecting RSVP's to your pizza parties. Your friends can select the days they want to come and enter their email address to receive a Google Calendar invite to the party.
 
 ## Installing
 
