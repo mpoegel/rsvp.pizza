@@ -7,6 +7,7 @@ type CalendarSource interface {
 	GetEvent(eventID string) (CalendarEvent, error)
 	InviteToEvent(eventID, email, name string) error
 	ListEvents(numEvents int) ([]CalendarEvent, error)
+	ListEventsBetween(start, end time.Time, numEvents int) ([]CalendarEvent, error)
 	CancelEvent(eventID string) error
 	ActivateEvent(eventID string) error
 }
@@ -50,6 +51,10 @@ func (c *Calendar) InviteToEvent(eventID, email, name string) error {
 
 func (c *Calendar) ListEvents(numEvents int) ([]CalendarEvent, error) {
 	return c.source.ListEvents(numEvents)
+}
+
+func (c *Calendar) ListEventsBetween(start, end time.Time, numEvents int) ([]CalendarEvent, error) {
+	return c.source.ListEventsBetween(start, end, numEvents)
 }
 
 func (c *Calendar) CancelEvent(eventID string) error {

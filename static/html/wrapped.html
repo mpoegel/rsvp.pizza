@@ -1,0 +1,27 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <h2>Pizza Wrapped</h2>
+
+    {{if not .Name}}
+    <form method="get" action="/wrapped">
+        <label for="email">Email</label>
+        <input type="text" id="email" name="email" />
+        <br>
+        <div id="submit">
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+    {{else}}
+    <p>Hi {{.Name}}</p>
+    <p>Of the {{.TotalFridays}} Pizza Fridays this year, you joined for {{.Attendance}}!</p>
+    {{end}}
+
+</body>
+
+</html>

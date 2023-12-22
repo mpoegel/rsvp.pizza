@@ -96,32 +96,42 @@ func (c *GoogleCalendar) getCalendarEvent(eventID string) (*calendar.Event, erro
 }
 
 func (c *GoogleCalendar) googleEventToEvent(event *calendar.Event) CalendarEvent {
-	startTime, err := time.Parse(time.RFC3339, event.Start.DateTime)
-	if err != nil {
-		Log.Error("could not parse event start time", zap.String("eventID", event.Id), zap.String("time", event.Start.DateTime))
+	var startTime time.Time
+	var endTime time.Time
+	var err error
+	if len(event.Start.DateTime) > 0 {
+		startTime, err = time.Parse(time.RFC3339, event.Start.DateTime)
+		if err != nil {
+			Log.Error("could not parse event start time", zap.String("eventID", event.Id), zap.String("time", event.Start.DateTime))
+		}
 	}
-	endTime, err := time.Parse(time.RFC3339, event.End.DateTime)
-	if err != nil {
-		Log.Error("could not parse event end time", zap.String("eventID", event.Id), zap.String("time", event.End.DateTime))
+	if len(event.End.DateTime) > 0 {
+		endTime, err = time.Parse(time.RFC3339, event.End.DateTime)
+		if err != nil {
+			Log.Error("could not parse event end time", zap.String("eventID", event.Id), zap.String("time", event.End.DateTime))
+		}
 	}
 	attendees := make([]string, len(event.Attendees))
 	for i, attendee := range event.Attendees {
 		attendees[i] = attendee.Email
 	}
-	return CalendarEvent{
-		AnyoneCanAddSelf:      event.AnyoneCanAddSelf,
-		Attendees:             attendees,
-		Description:           event.Description,
-		EndTime:               endTime,
-		GuestsCanInviteOthers: *event.GuestsCanInviteOthers,
-		GuestsCanModify:       event.GuestsCanModify,
-		Id:                    event.Id,
-		Locked:                event.Locked,
-		StartTime:             startTime,
-		Status:                event.Status,
-		Summary:               event.Summary,
-		Visibility:            event.Visibility,
+	evt := CalendarEvent{
+		AnyoneCanAddSelf: event.AnyoneCanAddSelf,
+		Attendees:        attendees,
+		Description:      event.Description,
+		EndTime:          endTime,
+		GuestsCanModify:  event.GuestsCanModify,
+		Id:               event.Id,
+		Locked:           event.Locked,
+		StartTime:        startTime,
+		Status:           event.Status,
+		Summary:          event.Summary,
+		Visibility:       event.Visibility,
 	}
+	if event.GuestsCanInviteOthers != nil {
+		evt.GuestsCanInviteOthers = *event.GuestsCanInviteOthers
+	}
+	return evt
 }
 
 func (c *GoogleCalendar) GetEvent(eventID string) (CalendarEvent, error) {
@@ -164,6 +174,26 @@ func (c *GoogleCalendar) ListEvents(numEvents int) ([]CalendarEvent, error) {
 		ShowDeleted(false).
 		SingleEvents(true).
 		TimeMin(t).
+		MaxResults(int64(numEvents)).
+		OrderBy("startTime").
+		Do()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]CalendarEvent, len(events.Items))
+	for i := range result {
+		result[i] = c.googleEventToEvent(events.Items[i])
+	}
+	return result, err
+}
+
+func (c *GoogleCalendar) ListEventsBetween(start, end time.Time, numEvents int) ([]CalendarEvent, error) {
+	// TODO add timeout
+	// TODO use start time
+	events, err := c.srv.Events.List(c.id).
+		ShowDeleted(false).
+		SingleEvents(true).
+		TimeMax(end.Format(time.RFC3339)).
 		MaxResults(int64(numEvents)).
 		OrderBy("startTime").
 		Do()
