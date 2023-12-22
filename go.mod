@@ -1,6 +1,6 @@
 module github.com/mpoegel/rsvp.pizza
 
-go 1.19
+go 1.21
 
 require (
 	github.com/fauna/faunadb-go/v4 v4.2.0

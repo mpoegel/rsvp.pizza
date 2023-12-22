@@ -42,7 +42,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 
 	googleCal, err := NewGoogleCalendar(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, context.Background())
 	if err != nil {
-		panic("could not create google calendar client")
+		return Server{}, err
 	}
 
 	s := Server{
