@@ -20,8 +20,8 @@ var StaticDir = "static"
 var EventDuration = time.Hour * 4
 
 type WrappedData struct {
-	Friends      map[string]int `json:"friends"`
-	TotalFridays int            `json:"totalFridays"`
+	Friends      map[string][]time.Time `json:"friends"`
+	TotalFridays int                    `json:"totalFridays"`
 }
 
 type Server struct {
@@ -136,15 +136,15 @@ func (s *Server) GetWrapped(year int) (WrappedData, error) {
 	}
 
 	data := WrappedData{
-		Friends:      map[string]int{},
+		Friends:      map[string][]time.Time{},
 		TotalFridays: 0,
 	}
 	for _, event := range events {
 		for _, attendee := range event.Attendees {
 			if _, ok := data.Friends[attendee]; !ok {
-				data.Friends[attendee] = 1
+				data.Friends[attendee] = []time.Time{event.StartTime}
 			} else {
-				data.Friends[attendee]++
+				data.Friends[attendee] = append(data.Friends[attendee], event.StartTime)
 			}
 		}
 		data.TotalFridays++
@@ -304,7 +304,7 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 type WrappedPageData struct {
 	Email        string
 	Name         string
-	Attendance   int
+	Attendance   []string
 	TotalFridays int
 }
 
@@ -328,17 +328,17 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	allowed, err := s.store.IsFriendAllowed(email)
-	if err != nil {
-		Log.Error("is friend allowed check failed", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-	if !allowed {
-		s.Handle4xx(w, r)
-		return
-	}
 	if len(email) > 0 {
+		allowed, err := s.store.IsFriendAllowed(email)
+		if err != nil {
+			Log.Error("is friend allowed check failed", zap.Error(err))
+			s.Handle500(w, r)
+			return
+		}
+		if !allowed {
+			s.Handle4xx(w, r)
+			return
+		}
 		wrapped, err := s.GetWrapped(year)
 		if err != nil {
 			// TODO possible 500 here too
@@ -348,10 +348,12 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 		data = WrappedPageData{
 			Email:        email,
 			Name:         "",
-			Attendance:   0,
+			Attendance:   make([]string, len(wrapped.Friends[email])),
 			TotalFridays: wrapped.TotalFridays,
 		}
-		data.Attendance = wrapped.Friends[email]
+		for i, t := range wrapped.Friends[email] {
+			data.Attendance[i] = t.Format(time.DateOnly)
+		}
 		data.Name, err = s.store.GetFriendName(email)
 		if err != nil {
 			Log.Error("could not get friend name", zap.Error(err))

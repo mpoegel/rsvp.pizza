@@ -19,9 +19,15 @@
     </form>
     {{else}}
     <p>Hi {{.Name}}</p>
-    <p>Of the {{.TotalFridays}} Pizza Fridays this year, you joined for {{.Attendance}}!</p>
+    <p>Of the {{.TotalFridays}} Pizza Fridays this year, you joined for {{len .Attendance}}!</p>
+
+    {{range .Attendance}}
+    <img width="32" src="/static/images/pizza.png" title="{{.}}" />
     {{end}}
 
+    <p>Here's to even more pizza next year!</p>
+
+    {{end}}
 </body>
 
 </html>
