@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	pizza "github.com/mpoegel/rsvp.pizza/internal/pizza"
+	pizza "github.com/mpoegel/rsvp.pizza/pkg/pizza"
 )
 
 type WrappedData struct {

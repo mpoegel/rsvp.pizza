@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/mpoegel/rsvp.pizza/internal/pizza"
+	"github.com/mpoegel/rsvp.pizza/pkg/pizza"
 	"go.uber.org/zap"
 )
 

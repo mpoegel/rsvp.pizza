@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mpoegel/rsvp.pizza/internal/pizza"
+	"github.com/mpoegel/rsvp.pizza/pkg/pizza"
 
 	"github.com/stretchr/testify/assert"
 )
