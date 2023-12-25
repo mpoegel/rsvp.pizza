@@ -22,3 +22,4 @@ configs/*test.yaml
 
 dist/
 wrapped.json
+*.db

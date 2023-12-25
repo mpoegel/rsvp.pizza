@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/fauna/faunadb-go/v4 v4.2.0
 	github.com/gorilla/mux v1.8.0
+	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.23.0
