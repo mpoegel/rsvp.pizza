@@ -1,38 +1,25 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"os"
-	"os/signal"
 
 	"github.com/mpoegel/rsvp.pizza/pkg/pizza"
-	"go.uber.org/zap"
 )
 
 func main() {
-	configFile := flag.String("config", "configs/pizza.yaml", "config file")
-	flag.Parse()
-	config, err := pizza.LoadConfig(*configFile)
-	if err != nil {
-		pizza.Log.Fatal("could not load config", zap.Error(err))
+	args := os.Args
+	if len(args) < 2 {
+		fmt.Println("command required: [run, edit]")
+		os.Exit(1)
 	}
-	metricsReg := pizza.NewPrometheusRegistry()
-	server, err := pizza.NewServer(config, metricsReg)
-	if err != nil {
-		pizza.Log.Fatal("could not create server", zap.Error(err))
+	switch args[1] {
+	case "run":
+		pizza.Run(os.Args[2:])
+	case "edit":
+		// TODO
+	default:
+		fmt.Println("command must be one of [run, edit]")
+		os.Exit(1)
 	}
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		pizza.Log.Info("shutting down")
-		server.Stop()
-	}()
-
-	if config.MetricsPort != 0 {
-		go metricsReg.Serve(config.MetricsPort)
-	}
-
-	server.Start()
 }
