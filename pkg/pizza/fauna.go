@@ -160,3 +160,8 @@ func (c *FaunaClient) AddFriday(date time.Time) error {
 	Log.Panic("not implemented")
 	return nil
 }
+
+func (c *FaunaClient) AddFriend(email, name string) error {
+	Log.Panic("not implemented")
+	return nil
+}

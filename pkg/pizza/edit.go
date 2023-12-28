@@ -4,18 +4,22 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
 )
 
 func Edit(args []string) {
-	nextFriday := time.Now()
-
 	fs := flag.NewFlagSet("edit", flag.ExitOnError)
 	isInteractive := fs.Bool("i", false, "interactive mode")
-	_ = fs.String("addFriday", formatEditDate(nextFriday), "add friday")
-	_ = fs.String("removeFriday", formatEditDate(nextFriday), "remove friday")
+	add := fs.String("a", "", `add a new friend or friday, formatted as
+		friend://<email>/<first name>/<last name> - to add a new friend
+		friday://YYYY/MM/DD - to add a new friday`)
+	remove := fs.String("d", "", `remove a new friend or friday, formatted as
+	friend://<email>/<first name>/<last name> - to remove a friend
+	friday://YYYY/MM/DD - to remove a friday`)
 	fs.Parse(args)
 
 	config := LoadConfigEnv()
@@ -28,9 +32,89 @@ func Edit(args []string) {
 		}
 	}
 
+	if len(*add) > 0 {
+		addParts := strings.SplitN(*add, "://", 2)
+		if len(addParts) != 2 {
+			fmt.Println("invalid add argument")
+			os.Exit(1)
+		}
+		switch addParts[0] {
+		case "friend":
+			addNewFriend(accessor, addParts[1])
+		case "friday":
+			addNewFriday(accessor, addParts[1])
+		default:
+			fmt.Println("invalid add target")
+			os.Exit(1)
+		}
+	}
+
+	if len(*remove) > 0 {
+		removeParts := strings.SplitN(*remove, "://", 2)
+		if len(removeParts) != 2 {
+			fmt.Println("invalid remove argument")
+			os.Exit(1)
+		}
+		switch removeParts[0] {
+		case "friend":
+			removeFriend(accessor, removeParts[1])
+		case "friday":
+			removeFriday(accessor, removeParts[1])
+		default:
+			fmt.Println("invalid remove target")
+			os.Exit(1)
+		}
+	}
+
 	if *isInteractive {
 		interactiveEdit(accessor)
 	}
+}
+
+func addNewFriend(accessor Accessor, newFriend string) {
+	newFriendParts := strings.SplitN(newFriend, "/", 2)
+	if len(newFriendParts) != 2 {
+		fmt.Printf("invalid friend format: %s\n", newFriend)
+		os.Exit(1)
+	}
+	email := newFriendParts[0]
+	name := newFriendParts[1]
+	name = strings.ReplaceAll(name, "/", " ")
+	if err := accessor.AddFriend(email, name); err != nil {
+		fmt.Printf("failed to add friend: %v\n", err)
+	} else {
+		fmt.Printf("added new friend: %s\n", email)
+	}
+}
+
+func addNewFriday(accessor Accessor, newFriday string) {
+	newFridayParts := strings.SplitN(newFriday, "/", 3)
+	if len(newFridayParts) != 3 {
+		fmt.Printf("invalid friday format: %s\n", newFriday)
+		os.Exit(1)
+	}
+	year, err1 := strconv.Atoi(newFridayParts[0])
+	month, err2 := strconv.Atoi(newFridayParts[1])
+	day, err3 := strconv.Atoi(newFridayParts[2])
+	if err1 != nil && err2 != nil && err3 != nil {
+		fmt.Printf("invalid friday: %s\n", newFriday)
+		os.Exit(1)
+	}
+	loc, _ := time.LoadLocation("America/New_York")
+	f := time.Date(year, time.Month(month), day, 17, 30, 0, 0, loc)
+	if err := accessor.AddFriday(f); err != nil {
+		fmt.Printf("accessor failure: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("added friday: %s\n", formatEditDate(f))
+}
+
+func removeFriend(accessor Accessor, friend string) {
+
+}
+
+func removeFriday(accessor Accessor, fridayStr string) {
+
 }
 
 func interactiveEdit(accessor Accessor) {

@@ -12,6 +12,7 @@ type Accessor interface {
 	GetUpcomingFridays(daysAhead int) ([]time.Time, error)
 	GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error)
 	AddFriday(date time.Time) error
+	AddFriend(email, name string) error
 }
 
 const (

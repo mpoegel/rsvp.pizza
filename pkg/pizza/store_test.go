@@ -45,6 +45,11 @@ func (m *MockAccessor) AddFriday(date time.Time) error {
 	return args.Error(0)
 }
 
+func (m *MockAccessor) AddFriend(email, name string) error {
+	args := m.Called(email, name)
+	return args.Error(0)
+}
+
 func TestStore_IsFriendAllowed(t *testing.T) {
 	// GIVEN
 	friend := "ted@tedlasso.com"
