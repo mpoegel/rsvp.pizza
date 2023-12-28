@@ -80,7 +80,7 @@ func loadIntEnv(name string, defaultVal int) int {
 	return val
 }
 
-func LoadConfigEnv(filename string) Config {
+func LoadConfigEnv() Config {
 	return Config{
 		Port:            loadIntEnv("PORT", 5000),
 		ReadTimeout:     time.Duration(loadIntEnv("READ_TIMEOUT", 3)) * time.Second,

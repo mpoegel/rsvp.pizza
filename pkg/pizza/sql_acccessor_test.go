@@ -76,7 +76,7 @@ func TestSqlAccessor_GetUpcomingFridays(t *testing.T) {
 	require.Nil(t, accessor.AddFriday(time.Now().Add(23*time.Hour)))
 
 	// WHEN
-	fridays, err := accessor.GetUpcomingFridays(time.Now().UTC().AddDate(0, 0, 1), 30)
+	fridays, err := accessor.GetUpcomingFridaysAfter(time.Now().UTC().AddDate(0, 0, 1), 30)
 	assert.Nil(t, err)
 	assert.NotNil(t, fridays)
 	require.Equal(t, 2, len(fridays))

@@ -101,6 +101,11 @@ func (c *FaunaClient) GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 	return times, nil
 }
 
+func (c *FaunaClient) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error) {
+	Log.Panic("not implemented")
+	return nil, nil
+}
+
 func (c *FaunaClient) CreateRSVP(friendEmail, code string, pendingDates []time.Time) error {
 	qRes, err := c.fc.Query(
 		f.Update(
@@ -143,5 +148,15 @@ func (c *FaunaClient) ConfirmRSVP(friendEmail, code string) error {
 		return err
 	}
 	Log.Debug("rsvp confirmed", zap.Any("result", qRes))
+	return nil
+}
+
+func (c *FaunaClient) CreateTables() error {
+	Log.Panic("not implemented")
+	return nil
+}
+
+func (c *FaunaClient) AddFriday(date time.Time) error {
+	Log.Panic("not implemented")
 	return nil
 }

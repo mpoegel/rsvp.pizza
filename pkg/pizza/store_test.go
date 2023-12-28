@@ -30,6 +30,21 @@ func (m *MockAccessor) GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
 	return args.Get(0).([]time.Time), args.Error(1)
 }
 
+func (m *MockAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error) {
+	args := m.Called(after, daysAhead)
+	return args.Get(0).([]time.Time), args.Error(1)
+}
+
+func (m *MockAccessor) CreateTables() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockAccessor) AddFriday(date time.Time) error {
+	args := m.Called(date)
+	return args.Error(0)
+}
+
 func TestStore_IsFriendAllowed(t *testing.T) {
 	// GIVEN
 	friend := "ted@tedlasso.com"

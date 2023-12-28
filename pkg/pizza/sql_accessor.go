@@ -2,7 +2,6 @@ package pizza
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -59,9 +58,12 @@ func (a *SQLAccessor) GetFriendName(email string) (string, error) {
 	return name, err
 }
 
-func (a *SQLAccessor) GetUpcomingFridays(after time.Time, daysAhead int) ([]time.Time, error) {
+func (a *SQLAccessor) GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
+	return a.GetUpcomingFridaysAfter(time.Now(), daysAhead)
+}
+
+func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error) {
 	before := after.AddDate(0, 0, daysAhead)
-	fmt.Printf("after: %s, before: %s\n", after, before)
 	stmt, err := a.db.Prepare("select start_time from fridays where start_time <= ? and start_time >= ?")
 	if err != nil {
 		return nil, err

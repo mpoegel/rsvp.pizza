@@ -6,9 +6,12 @@ import (
 )
 
 type Accessor interface {
+	CreateTables() error
 	IsFriendAllowed(email string) (bool, error)
 	GetFriendName(email string) (string, error)
 	GetUpcomingFridays(daysAhead int) ([]time.Time, error)
+	GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error)
+	AddFriday(date time.Time) error
 }
 
 const (
