@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var StaticDir = "static"
 var EventDuration = time.Hour * 4
 
 type WrappedData struct {
@@ -43,8 +41,16 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	r := mux.NewRouter()
 
 	var accessor Accessor
-	if faunaSecret := os.Getenv("FAUNADB_SECRET"); len(faunaSecret) > 0 {
-		accessor = NewFaunaClient(faunaSecret)
+	var err error
+	if config.UseSQLite {
+		Log.Info("using the sqlite accessor")
+		accessor, err = NewSQLAccessor(config.DBFile)
+		if err != nil {
+			return Server{}, err
+		}
+	} else if len(config.FaunaSecret) > 0 {
+		Log.Info("using the faunadb accessor")
+		accessor = NewFaunaClient(config.FaunaSecret)
 	} else {
 		panic("no FAUNADB_SECRET found")
 	}
@@ -81,7 +87,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	r.HandleFunc("/", s.HandleIndex)
 	r.HandleFunc("/submit", s.HandleSubmit)
 	r.HandleFunc("/wrapped", s.HandledWrapped)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
 
 	return s, nil
 }
@@ -167,7 +173,7 @@ type PageData struct {
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	s.indexGetMetric.Increment()
-	plate, err := template.ParseFiles(path.Join(StaticDir, "html/index.html"))
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/index.html"))
 	if err != nil {
 		Log.Error("template index failure", zap.Error(err))
 		s.Handle500(w, r)
@@ -209,7 +215,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	s.submitPostMetric.Increment()
-	plate, err := template.ParseFiles(path.Join(StaticDir, "html/submit.html"))
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/submit.html"))
 	if err != nil {
 		Log.Error("template submit failure", zap.Error(err))
 		s.Handle500(w, r)
@@ -310,7 +316,7 @@ type WrappedPageData struct {
 
 func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 	s.wrappedGetMetric.Increment()
-	plate, err := template.ParseFiles(path.Join(StaticDir, "html/wrapped.html"))
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/wrapped.html"))
 	if err != nil {
 		Log.Error("template wrapped failure", zap.Error(err))
 		s.Handle500(w, r)
@@ -372,7 +378,7 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {
 	s.requestErrorMetric.Increment()
-	plate, err := template.ParseFiles(path.Join(StaticDir, "html/4xx.html"))
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/4xx.html"))
 	if err != nil {
 		Log.Error("template 4xx failure", zap.Error(err))
 		s.Handle500(w, r)
@@ -388,7 +394,7 @@ func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Handle500(w http.ResponseWriter, r *http.Request) {
 	s.internalErrorMetric.Increment()
-	plate, err := template.ParseFiles(path.Join(StaticDir, "html/500.html"))
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/500.html"))
 	if err != nil {
 		Log.Error("template 500 failure", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)

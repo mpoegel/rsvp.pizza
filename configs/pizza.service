@@ -11,7 +11,7 @@ Type=simple
 Restart=always
 RestartSec=1
 EnvironmentFile=/etc/pizza/.env.prod
-ExecStart=/usr/local/bin/rsvp.pizza -config /etc/pizza/pizza.prod.yaml
+ExecStart=/usr/local/bin/rsvp.pizza run
 
 [Install]
 WantedBy=multi-user.target

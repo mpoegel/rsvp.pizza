@@ -10,13 +10,9 @@ import (
 
 func Run(args []string) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
-	configFile := fs.String("config", "configs/pizza.yaml", "config file")
 	fs.Parse(args)
 
-	config, err := LoadConfig(*configFile)
-	if err != nil {
-		Log.Fatal("could not load config", zap.Error(err))
-	}
+	config := LoadConfigEnv()
 	metricsReg := NewPrometheusRegistry()
 	server, err := NewServer(config, metricsReg)
 	if err != nil {

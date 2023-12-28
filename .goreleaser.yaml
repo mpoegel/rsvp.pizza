@@ -49,12 +49,6 @@ archives:
           owner: root
           group: root
           mode: 0644
-      - src: configs/pizza.yaml
-        dst: etc/pizza/pizza.yaml
-        info:
-          owner: pizza
-          group: pizza
-          mode: 0600
       - src: configs/.env
         dst: /etc/pizza/.env
         info:

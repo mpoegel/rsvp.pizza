@@ -19,19 +19,17 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("could not create logger: %v", err))
 	}
-
-	if val := os.Getenv("PIZZA_STATIC_DIR"); len(val) > 0 {
-		StaticDir = val
-	}
 }
 
 type Config struct {
 	Port            int            `yaml:"port"`
+	StaticDir       string         `yaml:"staticDir"`
 	ReadTimeout     time.Duration  `yaml:"readTimeout"`
 	WriteTimeout    time.Duration  `yaml:"writeTimeout"`
 	ShutdownTimeout time.Duration  `yaml:"shutdownTimeout"`
 	Calendar        CalendarConfig `yaml:"calendar"`
 	MetricsPort     int            `yaml:"metricsPort"`
+	FaunaSecret     string         `yaml:"faunaSecret"`
 	UseSQLite       bool           `yaml:"useSQLite"`
 	DBFile          string         `yaml:"dbFile"`
 }
@@ -83,6 +81,7 @@ func loadIntEnv(name string, defaultVal int) int {
 func LoadConfigEnv() Config {
 	return Config{
 		Port:            loadIntEnv("PORT", 5000),
+		StaticDir:       loadStrEnv("PIZZA_STATIC_DIR", "static"),
 		ReadTimeout:     time.Duration(loadIntEnv("READ_TIMEOUT", 3)) * time.Second,
 		WriteTimeout:    time.Duration(loadIntEnv("WRITE_TIMEOUT", 3)) * time.Second,
 		ShutdownTimeout: time.Duration(loadIntEnv("SHUTDOWN_TIMEOUT", 5)) * time.Second,
@@ -92,6 +91,7 @@ func LoadConfigEnv() Config {
 			ID:             loadStrEnv("CALENDAR_ID", "primary"),
 		},
 		MetricsPort: loadIntEnv("METRICS_PORT", 5050),
+		FaunaSecret: loadStrEnv("FAUNADB_SECRET", ""),
 		UseSQLite:   loadBoolEnv("USE_SQLITE", true),
 		DBFile:      loadStrEnv("DBFILE", "pizza.db"),
 	}
