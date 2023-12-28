@@ -20,6 +20,7 @@ func Edit(args []string) {
 	remove := fs.String("d", "", `remove a new friend or friday, formatted as
 	friend://<email>/<first name>/<last name> - to remove a friend
 	friday://YYYY/MM/DD - to remove a friday`)
+	list := fs.String("list", "", "list [friends, fridays]")
 	fs.Parse(args)
 
 	config := LoadConfigEnv()
@@ -62,6 +63,18 @@ func Edit(args []string) {
 			removeFriday(accessor, removeParts[1])
 		default:
 			fmt.Println("invalid remove target")
+			os.Exit(1)
+		}
+	}
+
+	if len(*list) > 0 {
+		switch *list {
+		case "friends":
+			listFriends(accessor)
+		case "fridays":
+			listFridays(accessor)
+		default:
+			fmt.Println("invalid list target")
 			os.Exit(1)
 		}
 	}
@@ -114,6 +127,21 @@ func removeFriend(accessor Accessor, friend string) {
 }
 
 func removeFriday(accessor Accessor, fridayStr string) {
+
+}
+
+func listFriends(accessor Accessor) {
+	friends, err := accessor.ListFriends()
+	if err != nil {
+		fmt.Printf("accessor failure: %v\n", err)
+		os.Exit(1)
+	}
+	for _, f := range friends {
+		fmt.Printf("%s - %s\n", f.Email, f.Name)
+	}
+}
+
+func listFridays(accessor Accessor) {
 
 }
 

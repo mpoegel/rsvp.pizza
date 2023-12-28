@@ -13,6 +13,12 @@ type Accessor interface {
 	GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error)
 	AddFriday(date time.Time) error
 	AddFriend(email, name string) error
+	ListFriends() ([]Friend, error)
+}
+
+type Friend struct {
+	Email string
+	Name  string
 }
 
 const (

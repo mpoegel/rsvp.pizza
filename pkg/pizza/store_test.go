@@ -50,6 +50,11 @@ func (m *MockAccessor) AddFriend(email, name string) error {
 	return args.Error(0)
 }
 
+func (m *MockAccessor) ListFriends() ([]pizza.Friend, error) {
+	args := m.Called()
+	return args.Get(0).([]pizza.Friend), args.Error(1)
+}
+
 func TestStore_IsFriendAllowed(t *testing.T) {
 	// GIVEN
 	friend := "ted@tedlasso.com"

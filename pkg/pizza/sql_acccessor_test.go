@@ -83,3 +83,27 @@ func TestSqlAccessor_GetUpcomingFridays(t *testing.T) {
 	assert.Equal(t, friday1, fridays[0])
 	assert.Equal(t, friday2, fridays[1])
 }
+
+func TestSqlAccessor_ListFriends(t *testing.T) {
+	// GIVEN
+	sqlfile := "test.db"
+	os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	require.Nil(t, err)
+	defer accessor.Close()
+	require.Nil(t, accessor.CreateTables())
+	require.Nil(t, accessor.AddFriend("foo@bar.com", "test1"))
+	require.Nil(t, accessor.AddFriend("another@better.net", "test2"))
+
+	// WHEN
+	friends, err := accessor.ListFriends()
+
+	// THEN
+	assert.Nil(t, err)
+	require.NotNil(t, friends)
+	require.Equal(t, 2, len(friends))
+	assert.Equal(t, "foo@bar.com", friends[0].Email)
+	assert.Equal(t, "test1", friends[0].Name)
+	assert.Equal(t, "another@better.net", friends[1].Email)
+	assert.Equal(t, "test2", friends[1].Name)
+}

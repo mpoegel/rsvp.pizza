@@ -165,3 +165,8 @@ func (c *FaunaClient) AddFriend(email, name string) error {
 	Log.Panic("not implemented")
 	return nil
 }
+
+func (c *FaunaClient) ListFriends() ([]Friend, error) {
+	Log.Panic("not implemented")
+	return nil, nil
+}

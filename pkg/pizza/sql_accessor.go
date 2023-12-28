@@ -102,3 +102,21 @@ func (a *SQLAccessor) AddFriday(date time.Time) error {
 	_, err = stmt.Exec(date)
 	return err
 }
+
+func (a *SQLAccessor) ListFriends() ([]Friend, error) {
+	stmt := "select email, name from friends"
+	rows, err := a.db.Query(stmt)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]Friend, 0)
+	for rows.Next() {
+		f := Friend{}
+		err = rows.Scan(&f.Email, &f.Name)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, f)
+	}
+	return res, nil
+}
