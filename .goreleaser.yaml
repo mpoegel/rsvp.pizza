@@ -6,7 +6,7 @@ builds:
     id: rsvp_pizza
     binary: usr/local/bin/rsvp.pizza
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - linux
     goarch:
