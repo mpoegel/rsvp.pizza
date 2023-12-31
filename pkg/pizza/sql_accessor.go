@@ -120,3 +120,21 @@ func (a *SQLAccessor) ListFriends() ([]Friend, error) {
 	}
 	return res, nil
 }
+
+func (a *SQLAccessor) ListFridays() ([]Friday, error) {
+	stmt := "select start_time from fridays"
+	rows, err := a.db.Query(stmt)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]Friday, 0)
+	for rows.Next() {
+		f := Friday{}
+		err = rows.Scan(&f.Date)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, f)
+	}
+	return res, nil
+}

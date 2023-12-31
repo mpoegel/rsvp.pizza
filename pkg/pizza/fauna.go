@@ -170,3 +170,8 @@ func (c *FaunaClient) ListFriends() ([]Friend, error) {
 	Log.Panic("not implemented")
 	return nil, nil
 }
+
+func (c *FaunaClient) ListFridays() ([]Friday, error) {
+	Log.Panic("not implemented")
+	return nil, nil
+}

@@ -14,11 +14,16 @@ type Accessor interface {
 	AddFriday(date time.Time) error
 	AddFriend(email, name string) error
 	ListFriends() ([]Friend, error)
+	ListFridays() ([]Friday, error)
 }
 
 type Friend struct {
 	Email string
 	Name  string
+}
+
+type Friday struct {
+	Date time.Time
 }
 
 const (

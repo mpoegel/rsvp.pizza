@@ -142,7 +142,14 @@ func listFriends(accessor Accessor) {
 }
 
 func listFridays(accessor Accessor) {
-
+	fridays, err := accessor.ListFridays()
+	if err != nil {
+		fmt.Printf("accessor failure: %v\n", err)
+		os.Exit(1)
+	}
+	for _, f := range fridays {
+		fmt.Printf("%s\n", f.Date.Format(time.RFC822))
+	}
 }
 
 func interactiveEdit(accessor Accessor) {
