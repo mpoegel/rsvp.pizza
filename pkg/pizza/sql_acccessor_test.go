@@ -107,3 +107,78 @@ func TestSqlAccessor_ListFriends(t *testing.T) {
 	assert.Equal(t, "another@better.net", friends[1].Email)
 	assert.Equal(t, "test2", friends[1].Name)
 }
+
+func TestSqlAccessor_ListFridays(t *testing.T) {
+	// GIVEN
+	sqlfile := "test.db"
+	os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	require.Nil(t, err)
+	defer accessor.Close()
+	require.Nil(t, accessor.CreateTables())
+	loc, _ := time.LoadLocation("America/New_York")
+	f1 := time.Date(2023, 12, 22, 17, 30, 0, 0, loc)
+	f2 := time.Date(2023, 12, 29, 17, 30, 0, 0, loc)
+	require.Nil(t, accessor.AddFriday(f1))
+	require.Nil(t, accessor.AddFriday(f2))
+
+	// WHEN
+	fridays, err := accessor.ListFridays()
+
+	// THEN
+	assert.Nil(t, err)
+	require.NotNil(t, fridays)
+	require.Equal(t, 2, len(fridays))
+	assert.Equal(t, f1, fridays[0].Date)
+	assert.Equal(t, f2, fridays[1].Date)
+}
+
+func TestSqlAccessor_RemoveFriend(t *testing.T) {
+	// GIVEN
+	sqlfile := "test.db"
+	os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	require.Nil(t, err)
+	defer accessor.Close()
+	require.Nil(t, accessor.CreateTables())
+	require.Nil(t, accessor.AddFriend("foo@bar.com", "test1"))
+	require.Nil(t, accessor.AddFriend("another@better.net", "test2"))
+
+	// WHEN
+	err = accessor.RemoveFriend("foo@bar.com")
+	friends, err2 := accessor.ListFriends()
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Nil(t, err2)
+	require.NotNil(t, friends)
+	require.Equal(t, 1, len(friends))
+	assert.Equal(t, "another@better.net", friends[0].Email)
+	assert.Equal(t, "test2", friends[0].Name)
+}
+
+func TestSqlAccessor_RemoveFriday(t *testing.T) {
+	// GIVEN
+	sqlfile := "test.db"
+	os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	require.Nil(t, err)
+	defer accessor.Close()
+	require.Nil(t, accessor.CreateTables())
+	loc, _ := time.LoadLocation("America/New_York")
+	f1 := time.Date(2023, 12, 22, 17, 30, 0, 0, loc)
+	f2 := time.Date(2023, 12, 29, 17, 30, 0, 0, loc)
+	require.Nil(t, accessor.AddFriday(f1))
+	require.Nil(t, accessor.AddFriday(f2))
+
+	// WHEN
+	err = accessor.RemoveFriday(f1)
+	fridays, err2 := accessor.ListFridays()
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Nil(t, err2)
+	require.NotNil(t, fridays)
+	require.Equal(t, 1, len(fridays))
+	assert.Equal(t, f2, fridays[0].Date)
+}

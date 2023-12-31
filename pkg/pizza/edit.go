@@ -18,7 +18,7 @@ func Edit(args []string) {
 		friend://<email>/<first name>/<last name> - to add a new friend
 		friday://YYYY/MM/DD - to add a new friday`)
 	remove := fs.String("d", "", `remove a new friend or friday, formatted as
-	friend://<email>/<first name>/<last name> - to remove a friend
+	friend://<email> - to remove a friend
 	friday://YYYY/MM/DD - to remove a friday`)
 	list := fs.String("list", "", "list [friends, fridays]")
 	fs.Parse(args)
@@ -123,11 +123,33 @@ func addNewFriday(accessor Accessor, newFriday string) {
 }
 
 func removeFriend(accessor Accessor, friend string) {
-
+	if err := accessor.RemoveFriend(friend); err != nil {
+		fmt.Printf("accessor failure: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("removed friend: %s\n", friend)
 }
 
 func removeFriday(accessor Accessor, fridayStr string) {
-
+	newFridayParts := strings.SplitN(fridayStr, "/", 3)
+	if len(newFridayParts) != 3 {
+		fmt.Printf("invalid friday format: %s\n", fridayStr)
+		os.Exit(1)
+	}
+	year, err1 := strconv.Atoi(newFridayParts[0])
+	month, err2 := strconv.Atoi(newFridayParts[1])
+	day, err3 := strconv.Atoi(newFridayParts[2])
+	if err1 != nil && err2 != nil && err3 != nil {
+		fmt.Printf("invalid friday: %s\n", fridayStr)
+		os.Exit(1)
+	}
+	loc, _ := time.LoadLocation("America/New_York")
+	f := time.Date(year, time.Month(month), day, 17, 30, 0, 0, loc)
+	if err := accessor.RemoveFriday(f); err != nil {
+		fmt.Printf("accessor failure: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("removed friday: %s\n", formatEditDate(f))
 }
 
 func listFriends(accessor Accessor) {
@@ -196,8 +218,11 @@ func interactiveEdit(accessor Accessor) {
 			}
 			fmt.Printf("added %s\n", formatEditDate(nextFourFridays[index]))
 		case "d":
-			// TODO
-			fmt.Printf("remove %d\n", index)
+			if err := accessor.RemoveFriday(nextFourFridays[index]); err != nil {
+				fmt.Printf("accessor failure: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("removed %s\n", formatEditDate(nextFourFridays[index]))
 		default:
 			fmt.Println(helpStr)
 		}

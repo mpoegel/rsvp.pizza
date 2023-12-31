@@ -175,3 +175,14 @@ func (c *FaunaClient) ListFridays() ([]Friday, error) {
 	Log.Panic("not implemented")
 	return nil, nil
 }
+
+func (c *FaunaClient) RemoveFriend(email string) error {
+	Log.Panic("not implemented")
+	return nil
+
+}
+
+func (c *FaunaClient) RemoveFriday(date time.Time) error {
+	Log.Panic("not implemented")
+	return nil
+}

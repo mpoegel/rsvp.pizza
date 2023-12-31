@@ -60,6 +60,16 @@ func (m *MockAccessor) ListFridays() ([]pizza.Friday, error) {
 	return args.Get(0).([]pizza.Friday), args.Error(1)
 }
 
+func (m *MockAccessor) RemoveFriend(email string) error {
+	args := m.Called(email)
+	return args.Error(0)
+}
+
+func (m *MockAccessor) RemoveFriday(date time.Time) error {
+	args := m.Called(date)
+	return args.Error(0)
+}
+
 func TestStore_IsFriendAllowed(t *testing.T) {
 	// GIVEN
 	friend := "ted@tedlasso.com"

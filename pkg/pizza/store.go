@@ -15,6 +15,8 @@ type Accessor interface {
 	AddFriend(email, name string) error
 	ListFriends() ([]Friend, error)
 	ListFridays() ([]Friday, error)
+	RemoveFriend(email string) error
+	RemoveFriday(date time.Time) error
 }
 
 type Friend struct {

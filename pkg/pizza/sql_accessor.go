@@ -127,14 +127,34 @@ func (a *SQLAccessor) ListFridays() ([]Friday, error) {
 	if err != nil {
 		return nil, err
 	}
+	loc, _ := time.LoadLocation("America/New_York")
 	res := make([]Friday, 0)
 	for rows.Next() {
 		f := Friday{}
 		err = rows.Scan(&f.Date)
+		f.Date = f.Date.In(loc)
 		if err != nil {
 			return nil, err
 		}
 		res = append(res, f)
 	}
 	return res, nil
+}
+
+func (a *SQLAccessor) RemoveFriend(email string) error {
+	stmt, err := a.db.Prepare("delete from friends where email = ?")
+	if err != nil {
+		return nil
+	}
+	_, err = stmt.Exec(email)
+	return err
+}
+
+func (a *SQLAccessor) RemoveFriday(date time.Time) error {
+	stmt, err := a.db.Prepare("delete from fridays where start_time = ?")
+	if err != nil {
+		return nil
+	}
+	_, err = stmt.Exec(date)
+	return err
 }
