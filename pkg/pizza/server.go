@@ -11,8 +11,11 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/gorilla/mux"
-	"go.uber.org/zap"
+	oidc "github.com/coreos/go-oidc"
+	uuid "github.com/google/uuid"
+	mux "github.com/gorilla/mux"
+	zap "go.uber.org/zap"
+	oauth2 "golang.org/x/oauth2"
 )
 
 var EventDuration = time.Hour * 4
@@ -28,13 +31,20 @@ type Server struct {
 	calendar *Calendar
 	config   Config
 
+	oauth2Provider *oidc.Provider
+	oauth2Conf     oauth2.Config
+	verifier       *oidc.IDTokenVerifier
+
 	indexGetMetric      CounterMetric
 	submitPostMetric    CounterMetric
 	wrappedGetMetric    CounterMetric
 	requestErrorMetric  CounterMetric
 	internalErrorMetric CounterMetric
 
-	wrapped map[int]WrappedData
+	wrapped  map[int]WrappedData
+	sessions map[string]*TokenClaims
+
+	// activeState string
 }
 
 func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
@@ -60,6 +70,14 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		return Server{}, err
 	}
 
+	// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// defer cancel()
+	ctx := context.Background()
+	provider, err := oidc.NewProvider(ctx, config.OAuth2.RealmsURL)
+	if err != nil {
+		return Server{}, err
+	}
+
 	s := Server{
 		s: http.Server{
 			Addr:         fmt.Sprintf("0.0.0.0:%d", config.Port),
@@ -70,6 +88,19 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		store:    NewStore(accessor),
 		calendar: NewCalendar(googleCal),
 		config:   config,
+
+		oauth2Provider: provider,
+		oauth2Conf: oauth2.Config{
+			ClientID:     config.OAuth2.ClientID,
+			ClientSecret: config.OAuth2.ClientSecret,
+			RedirectURL:  config.OAuth2.RedirectURL,
+			Endpoint:     provider.Endpoint(),
+			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		},
+		verifier: provider.Verifier(&oidc.Config{
+			ClientID: config.OAuth2.ClientID,
+		}),
+
 		indexGetMetric: metricsReg.NewCounterMetric("pizza_requests",
 			map[string]string{"method": "get", "path": "/"}),
 		submitPostMetric: metricsReg.NewCounterMetric("pizza_requests",
@@ -81,13 +112,16 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		internalErrorMetric: metricsReg.NewCounterMetric("pizza_errors",
 			map[string]string{"statusCode": "500"}),
 
-		wrapped: map[int]WrappedData{},
+		wrapped:  map[int]WrappedData{},
+		sessions: map[string]*TokenClaims{},
 	}
 
 	r.HandleFunc("/", s.HandleIndex)
 	r.HandleFunc("/submit", s.HandleSubmit)
 	r.HandleFunc("/wrapped", s.HandledWrapped)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
+	r.HandleFunc("/login", s.HandleLogin)
+	r.HandleFunc("/login/callback", s.HandleLoginCallback)
 
 	return s, nil
 }
@@ -169,17 +203,41 @@ type IndexFridayData struct {
 
 type PageData struct {
 	FridayTimes []IndexFridayData
+	Name        string
 }
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	s.indexGetMetric.Increment()
+
+	var claims *TokenClaims
+	for _, cookie := range r.Cookies() {
+		if cookie.Name == "session" {
+			var ok bool
+			claims, ok = s.sessions[cookie.Value]
+			// either bad session or auth has expired
+			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
+				delete(s.sessions, cookie.Value)
+				http.Redirect(w, r, "/login", http.StatusFound)
+				return
+			}
+		}
+	}
+	if claims == nil {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	Log.Info("welcome", zap.String("name", claims.Name))
+
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/index.html"))
 	if err != nil {
 		Log.Error("template index failure", zap.Error(err))
 		s.Handle500(w, r)
 		return
 	}
-	data := PageData{}
+	data := PageData{
+		Name: claims.GivenName,
+	}
 
 	fridays, err := s.store.GetUpcomingFridays(30)
 	if err != nil {
@@ -305,6 +363,111 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		s.Handle500(w, r)
 		return
 	}
+}
+
+func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	state := uuid.New()
+	rawAccessToken := r.Header.Get("Authorization")
+	if rawAccessToken == "" {
+		s.sessions[state.String()] = nil
+		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
+		return
+	}
+
+	authParts := strings.Split(rawAccessToken, " ")
+	if len(authParts) != 2 {
+		w.WriteHeader(400)
+		return
+	}
+
+	ctx := context.Background()
+	_, err := s.verifier.Verify(ctx, authParts[1])
+	if err != nil {
+		s.sessions[state.String()] = nil
+		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("ok"))
+}
+
+type TokenClaims struct {
+	Exp               int64  `json:"exp"`
+	Iat               int64  `json:"iat"`
+	AuthTime          int64  `json:"auth_time"`
+	Jti               string `json:"jti"`
+	Iss               string `json:"iss"`
+	Aud               string `json:"aud"`
+	Sub               string `json:"sub"`
+	Typ               string `json:"typ"`
+	Azp               string `json:"azp"`
+	SessionState      string `json:"session_state"`
+	At_hash           string `json:"at_hash"`
+	Acr               string `json:"acr"`
+	Sid               string `json:"sid"`
+	EmailVerified     bool   `json:"email_verified"`
+	Name              string `json:"name"`
+	PreferredUsername string `json:"preferred_username"`
+	GivenName         string `json:"given_name"`
+	FamilyName        string `json:"family_name"`
+	Email             string `json:"email"`
+}
+
+func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
+	state := r.URL.Query().Get("state")
+	if _, ok := s.sessions[state]; !ok {
+		Log.Warn("state did not match")
+		http.Error(w, "state did not match", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	oauth2Token, err := s.oauth2Conf.Exchange(ctx, r.URL.Query().Get("code"))
+	if err != nil {
+		Log.Warn("failed to exchange code for token", zap.Error(err))
+		http.Error(w, "auth error", http.StatusInternalServerError)
+		return
+	}
+
+	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	if !ok {
+		Log.Warn("no id_token field in oauth2 token")
+		http.Error(w, "auth error", http.StatusInternalServerError)
+		return
+	}
+
+	idToken, err := s.verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		Log.Warn("failed to verify ID token", zap.Error(err))
+		http.Error(w, "auth error", http.StatusInternalServerError)
+		return
+	}
+
+	var claims TokenClaims
+	if err := idToken.Claims(&claims); err != nil {
+		Log.Warn("failed to get claims", zap.Error(err))
+		http.Error(w, "auth error", http.StatusInternalServerError)
+		return
+	}
+
+	Log.Info("login success", zap.Any("claims", claims))
+	cookie := &http.Cookie{
+		Name:     "session",
+		Value:    state,
+		Path:     "/",
+		Expires:  time.Now().AddDate(0, 0, 10),
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+	}
+	if err := cookie.Valid(); err != nil {
+		Log.Warn("bad cookie", zap.Error(err))
+	}
+	http.SetCookie(w, cookie)
+	r.AddCookie(cookie)
+
+	s.sessions[state] = &claims
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 type WrappedPageData struct {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
+	zap "go.uber.org/zap"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var Log *zap.Logger
@@ -32,12 +32,20 @@ type Config struct {
 	FaunaSecret     string         `yaml:"faunaSecret"`
 	UseSQLite       bool           `yaml:"useSQLite"`
 	DBFile          string         `yaml:"dbFile"`
+	OAuth2          OAuth2Config
 }
 
 type CalendarConfig struct {
 	CredentialFile string `yaml:"credentialFile"`
 	TokenFile      string `yaml:"tokenFile"`
 	ID             string `yaml:"id"`
+}
+
+type OAuth2Config struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	RealmsURL    string
 }
 
 func LoadConfig(filename string) (Config, error) {
@@ -94,5 +102,11 @@ func LoadConfigEnv() Config {
 		FaunaSecret: loadStrEnv("FAUNADB_SECRET", ""),
 		UseSQLite:   loadBoolEnv("USE_SQLITE", true),
 		DBFile:      loadStrEnv("DBFILE", "pizza.db"),
+		OAuth2: OAuth2Config{
+			ClientID:     loadStrEnv("OAUTH2_CLIENT_ID", ""),
+			ClientSecret: loadStrEnv("OAUTH2_CLIENT_SECRET", ""),
+			RedirectURL:  loadStrEnv("OAUTH2_REDIRECT", "http://localhost/login/callback"),
+			RealmsURL:    loadStrEnv("REALMS_URL", "http://localhost:8080/auth/realms/pizza"),
+		},
 	}
 }
