@@ -70,8 +70,6 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		return Server{}, err
 	}
 
-	// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// defer cancel()
 	ctx := context.Background()
 	provider, err := oidc.NewProvider(ctx, config.OAuth2.RealmsURL)
 	if err != nil {
@@ -93,7 +91,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		oauth2Conf: oauth2.Config{
 			ClientID:     config.OAuth2.ClientID,
 			ClientSecret: config.OAuth2.ClientSecret,
-			RedirectURL:  config.OAuth2.RedirectURL,
+			RedirectURL:  config.OAuth2.RedirectURL + "/login/callback",
 			Endpoint:     provider.Endpoint(),
 			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 		},
@@ -122,6 +120,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
 	r.HandleFunc("/login", s.HandleLogin)
 	r.HandleFunc("/login/callback", s.HandleLoginCallback)
+	r.HandleFunc("/logout", s.HandleLogout)
 
 	return s, nil
 }
@@ -204,10 +203,80 @@ type IndexFridayData struct {
 type PageData struct {
 	FridayTimes []IndexFridayData
 	Name        string
+	LoggedIn    bool
+	LogoutURL   string
 }
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	s.indexGetMetric.Increment()
+
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/index.html"))
+	if err != nil {
+		Log.Error("template index failure", zap.Error(err))
+		s.Handle500(w, r)
+		return
+	}
+	data := PageData{
+		LoggedIn: false,
+	}
+
+	var claims *TokenClaims
+	for _, cookie := range r.Cookies() {
+		if cookie.Name == "session" {
+			var ok bool
+			claims, ok = s.sessions[cookie.Value]
+			// either bad session or auth has expired
+			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
+				Log.Debug("cookie session invalid or expired")
+				delete(s.sessions, cookie.Value)
+				break
+			}
+		}
+	}
+	if claims == nil {
+		Log.Debug("no login cookies found")
+	} else {
+		data.LoggedIn = true
+
+		Log.Info("welcome", zap.String("name", claims.Name))
+		data.Name = claims.GivenName
+		data.LogoutURL = fmt.Sprintf("%s/%s?post_logout_redirect_uri=%s/logout&client_id=%s", s.oauth2Conf.Endpoint.AuthURL, "../logout", s.config.OAuth2.RedirectURL, "pizza")
+
+		fridays, err := s.store.GetUpcomingFridays(30)
+		if err != nil {
+			Log.Error("failed to get fridays", zap.Error(err))
+			s.Handle500(w, r)
+			return
+		}
+
+		estZone, _ := time.LoadLocation("America/New_York")
+		data.FridayTimes = make([]IndexFridayData, len(fridays))
+		for i, t := range fridays {
+			t = t.In(estZone)
+			data.FridayTimes[i].Date = t.Format(time.RFC822)
+			data.FridayTimes[i].ID = t.Unix()
+
+			eventID := strconv.FormatInt(data.FridayTimes[i].ID, 10)
+			if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
+				Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
+				data.FridayTimes[i].Guests = make([]int, 0)
+			} else if err != nil {
+				data.FridayTimes[i].Guests = make([]int, 0)
+			} else {
+				data.FridayTimes[i].Guests = make([]int, len(event.Attendees))
+			}
+		}
+	}
+
+	if err = plate.Execute(w, data); err != nil {
+		Log.Error("template execution failure", zap.Error(err))
+		s.Handle500(w, r)
+		return
+	}
+}
+
+func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
+	s.submitPostMetric.Increment()
 
 	var claims *TokenClaims
 	for _, cookie := range r.Cookies() {
@@ -227,52 +296,6 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Log.Info("welcome", zap.String("name", claims.Name))
-
-	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/index.html"))
-	if err != nil {
-		Log.Error("template index failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-	data := PageData{
-		Name: claims.GivenName,
-	}
-
-	fridays, err := s.store.GetUpcomingFridays(30)
-	if err != nil {
-		Log.Error("failed to get fridays", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-
-	estZone, _ := time.LoadLocation("America/New_York")
-	data.FridayTimes = make([]IndexFridayData, len(fridays))
-	for i, t := range fridays {
-		t = t.In(estZone)
-		data.FridayTimes[i].Date = t.Format(time.RFC822)
-		data.FridayTimes[i].ID = t.Unix()
-
-		eventID := strconv.FormatInt(data.FridayTimes[i].ID, 10)
-		if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
-			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
-			data.FridayTimes[i].Guests = make([]int, 0)
-		} else if err != nil {
-			data.FridayTimes[i].Guests = make([]int, 0)
-		} else {
-			data.FridayTimes[i].Guests = make([]int, len(event.Attendees))
-		}
-	}
-
-	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-}
-
-func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
-	s.submitPostMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/submit.html"))
 	if err != nil {
 		Log.Error("template submit failure", zap.Error(err))
@@ -289,12 +312,7 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		s.Handle4xx(w, r)
 		return
 	}
-	email := form.Get("email")
-	if len(email) == 0 {
-		s.Handle4xx(w, r)
-		return
-	}
-	email = strings.ToLower(email)
+	email := strings.ToLower(claims.Email)
 	Log.Debug("rsvp request", zap.String("email", email), zap.Strings("dates", dates))
 
 	if ok, err := s.store.IsFriendAllowed(email); !ok {
@@ -458,7 +476,10 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().AddDate(0, 0, 10),
 		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
+	}
+	if strings.HasPrefix(s.config.OAuth2.RedirectURL, "https") {
+		cookie.Secure = true
+		cookie.SameSite = http.SameSiteNoneMode
 	}
 	if err := cookie.Valid(); err != nil {
 		Log.Warn("bad cookie", zap.Error(err))
@@ -468,6 +489,27 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 
 	s.sessions[state] = &claims
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	for _, cookie := range r.Cookies() {
+		if cookie.Name == "session" {
+			delete(s.sessions, cookie.Value)
+		}
+	}
+
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/logout.html"))
+	if err != nil {
+		Log.Error("template submit failure", zap.Error(err))
+		s.Handle500(w, r)
+		return
+	}
+
+	if err = plate.Execute(w, nil); err != nil {
+		Log.Error("template execution failure", zap.Error(err))
+		s.Handle500(w, r)
+		return
+	}
 }
 
 type WrappedPageData struct {

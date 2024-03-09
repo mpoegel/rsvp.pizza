@@ -105,7 +105,7 @@ func LoadConfigEnv() Config {
 		OAuth2: OAuth2Config{
 			ClientID:     loadStrEnv("OAUTH2_CLIENT_ID", ""),
 			ClientSecret: loadStrEnv("OAUTH2_CLIENT_SECRET", ""),
-			RedirectURL:  loadStrEnv("OAUTH2_REDIRECT", "http://localhost/login/callback"),
+			RedirectURL:  loadStrEnv("OAUTH2_REDIRECT", "http://localhost"),
 			RealmsURL:    loadStrEnv("REALMS_URL", "http://localhost:8080/auth/realms/pizza"),
 		},
 	}

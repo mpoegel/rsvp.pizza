@@ -9,6 +9,7 @@
 <body>
     <h2>RSVP For Pizza</h2>
 
+    {{if .LoggedIn}}
     <p>Hi {{.Name}}</p>
 
     <form method="get" action="/submit">
@@ -19,13 +20,18 @@
         {{else}}
         <p>There are no upcoming pizza fridays.</p>
         {{end}}
-        <label for="email">Email</label>
-        <input type="text" id="email" name="email" />
         <br>
         <div id="submit">
             <input type="submit" value="Submit">
         </div>
     </form>
+
+    <br><br>
+    <a href="{{.LogoutURL}}">logout</a>
+
+    {{else}}
+    <a href="/login">login</a>
+    {{end}}
 
 </body>
 
