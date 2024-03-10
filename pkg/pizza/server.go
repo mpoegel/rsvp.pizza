@@ -2,7 +2,6 @@ package pizza
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	uuid "github.com/google/uuid"
 	mux "github.com/gorilla/mux"
 	zap "go.uber.org/zap"
 	oauth2 "golang.org/x/oauth2"
@@ -159,45 +157,6 @@ func (s *Server) WatchCalendar(period time.Duration) {
 		<-timer.C
 		timer.Reset(period)
 	}
-}
-
-func (s *Server) GetWrapped(year int) (WrappedData, error) {
-	// restrict range
-	if year != 2023 {
-		return WrappedData{}, errors.New("no wrapped for year")
-	}
-
-	// check cache
-	if d, ok := s.wrapped[year]; ok {
-		return d, nil
-	}
-
-	// fetch from source
-	start := time.Time{}.AddDate(year, 1, 1)
-	end := time.Time{}.AddDate(year, 12, 31)
-	events, err := s.calendar.ListEventsBetween(start, end, 100)
-	if err != nil {
-		return WrappedData{}, err
-	}
-
-	data := WrappedData{
-		Friends:      map[string][]time.Time{},
-		TotalFridays: 0,
-	}
-	for _, event := range events {
-		for _, attendee := range event.Attendees {
-			if _, ok := data.Friends[attendee]; !ok {
-				data.Friends[attendee] = []time.Time{event.StartTime}
-			} else {
-				data.Friends[attendee] = append(data.Friends[attendee], event.StartTime)
-			}
-		}
-		data.TotalFridays++
-	}
-	Log.Info("wrapped cache update", zap.Int("year", year), zap.Any("data", data))
-	// update cache then return
-	s.wrapped[year] = data
-	return data, nil
 }
 
 type IndexFridayData struct {
@@ -389,215 +348,6 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		Log.Debug("event updated", zap.String("eventID", d), zap.String("email", email), zap.String("name", friendName))
 	}
 
-	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-}
-
-func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
-	state := uuid.New()
-	rawAccessToken := r.Header.Get("Authorization")
-	if rawAccessToken == "" {
-		s.sessions[state.String()] = nil
-		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
-		return
-	}
-
-	authParts := strings.Split(rawAccessToken, " ")
-	if len(authParts) != 2 {
-		w.WriteHeader(400)
-		return
-	}
-
-	ctx := context.Background()
-	_, err := s.verifier.Verify(ctx, authParts[1])
-	if err != nil {
-		s.sessions[state.String()] = nil
-		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
-}
-
-type TokenClaims struct {
-	Exp               int64    `json:"exp"`
-	Iat               int64    `json:"iat"`
-	AuthTime          int64    `json:"auth_time"`
-	Jti               string   `json:"jti"`
-	Iss               string   `json:"iss"`
-	Aud               string   `json:"aud"`
-	Sub               string   `json:"sub"`
-	Typ               string   `json:"typ"`
-	Azp               string   `json:"azp"`
-	SessionState      string   `json:"session_state"`
-	At_hash           string   `json:"at_hash"`
-	Acr               string   `json:"acr"`
-	Sid               string   `json:"sid"`
-	EmailVerified     bool     `json:"email_verified"`
-	Name              string   `json:"name"`
-	PreferredUsername string   `json:"preferred_username"`
-	GivenName         string   `json:"given_name"`
-	FamilyName        string   `json:"family_name"`
-	Email             string   `json:"email"`
-	Groups            []string `json:"groups"`
-	Roles             []string `json:"roles"`
-}
-
-func (c *TokenClaims) HasRole(role string) bool {
-	for _, r := range c.Roles {
-		if r == role {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
-	state := r.URL.Query().Get("state")
-	if _, ok := s.sessions[state]; !ok {
-		Log.Warn("state did not match")
-		http.Error(w, "state did not match", http.StatusBadRequest)
-		return
-	}
-
-	ctx := context.Background()
-	oauth2Token, err := s.oauth2Conf.Exchange(ctx, r.URL.Query().Get("code"))
-	if err != nil {
-		Log.Warn("failed to exchange code for token", zap.Error(err))
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		Log.Warn("no id_token field in oauth2 token")
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	idToken, err := s.verifier.Verify(ctx, rawIDToken)
-	if err != nil {
-		Log.Warn("failed to verify ID token", zap.Error(err))
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	var claims TokenClaims
-	if err := idToken.Claims(&claims); err != nil {
-		Log.Warn("failed to get claims", zap.Error(err))
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	Log.Info("login success", zap.Any("claims", claims))
-	cookie := &http.Cookie{
-		Name:     "session",
-		Value:    state,
-		Path:     "/",
-		Expires:  time.Now().AddDate(0, 0, 10),
-		HttpOnly: true,
-	}
-	if strings.HasPrefix(s.config.OAuth2.RedirectURL, "https") {
-		cookie.Secure = true
-		cookie.SameSite = http.SameSiteNoneMode
-	}
-	if err := cookie.Valid(); err != nil {
-		Log.Warn("bad cookie", zap.Error(err))
-	}
-	http.SetCookie(w, cookie)
-	r.AddCookie(cookie)
-
-	s.sessions[state] = &claims
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == "session" {
-			delete(s.sessions, cookie.Value)
-		}
-	}
-
-	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/logout.html"))
-	if err != nil {
-		Log.Error("template submit failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-
-	if err = plate.Execute(w, nil); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-}
-
-type WrappedPageData struct {
-	Email        string
-	Name         string
-	Attendance   []string
-	TotalFridays int
-}
-
-func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
-	s.wrappedGetMetric.Increment()
-	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/wrapped.html"))
-	if err != nil {
-		Log.Error("template wrapped failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-	data := WrappedPageData{}
-	form := r.URL.Query()
-	email := form.Get("email")
-	yearStr := form.Get("year")
-	year := 2023
-	if len(yearStr) != 0 {
-		year, err = strconv.Atoi(yearStr)
-		if err != nil {
-			s.Handle4xx(w, r)
-			return
-		}
-	}
-	if len(email) > 0 {
-		allowed, err := s.store.IsFriendAllowed(email)
-		if err != nil {
-			Log.Error("is friend allowed check failed", zap.Error(err))
-			s.Handle500(w, r)
-			return
-		}
-		if !allowed {
-			s.Handle4xx(w, r)
-			return
-		}
-		wrapped, err := s.GetWrapped(year)
-		if err != nil {
-			// TODO possible 500 here too
-			s.Handle4xx(w, r)
-			return
-		}
-		data = WrappedPageData{
-			Email:        email,
-			Name:         "",
-			Attendance:   make([]string, len(wrapped.Friends[email])),
-			TotalFridays: wrapped.TotalFridays,
-		}
-		for i, t := range wrapped.Friends[email] {
-			data.Attendance[i] = t.Format(time.DateOnly)
-		}
-		data.Name, err = s.store.GetFriendName(email)
-		if err != nil {
-			Log.Error("could not get friend name", zap.Error(err))
-			return
-		}
-		// only use the first name
-		nameParts := strings.Split(data.Name, " ")
-		data.Name = nameParts[0]
-	}
 	if err = plate.Execute(w, data); err != nil {
 		Log.Error("template execution failure", zap.Error(err))
 		s.Handle500(w, r)
