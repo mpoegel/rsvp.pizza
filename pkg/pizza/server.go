@@ -34,6 +34,7 @@ type Server struct {
 	oauth2Provider *oidc.Provider
 	oauth2Conf     oauth2.Config
 	verifier       *oidc.IDTokenVerifier
+	keycloak       *Keycloak
 
 	indexGetMetric      CounterMetric
 	submitPostMetric    CounterMetric
@@ -43,8 +44,6 @@ type Server struct {
 
 	wrapped  map[int]WrappedData
 	sessions map[string]*TokenClaims
-
-	// activeState string
 }
 
 func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
@@ -71,8 +70,13 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	}
 
 	ctx := context.Background()
-	provider, err := oidc.NewProvider(ctx, config.OAuth2.RealmsURL)
+	provider, err := oidc.NewProvider(ctx, config.OAuth2.KeycloakURL+"/realms/"+config.OAuth2.Realm)
 	if err != nil {
+		return Server{}, err
+	}
+	k, err := NewKeycloak(config.OAuth2)
+	if err != nil {
+		Log.Error("keycloak failure", zap.Error(err))
 		return Server{}, err
 	}
 
@@ -98,6 +102,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		verifier: provider.Verifier(&oidc.Config{
 			ClientID: config.OAuth2.ClientID,
 		}),
+		keycloak: k,
 
 		indexGetMetric: metricsReg.NewCounterMetric("pizza_requests",
 			map[string]string{"method": "get", "path": "/"}),
@@ -121,6 +126,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	r.HandleFunc("/login", s.HandleLogin)
 	r.HandleFunc("/login/callback", s.HandleLoginCallback)
 	r.HandleFunc("/logout", s.HandleLogout)
+	r.HandleFunc("/admin", s.HandleAdmin)
 
 	return s, nil
 }
@@ -197,7 +203,7 @@ func (s *Server) GetWrapped(year int) (WrappedData, error) {
 type IndexFridayData struct {
 	Date   string
 	ID     int64
-	Guests []int
+	Guests []string
 }
 
 type PageData struct {
@@ -259,11 +265,18 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			eventID := strconv.FormatInt(data.FridayTimes[i].ID, 10)
 			if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
 				Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
-				data.FridayTimes[i].Guests = make([]int, 0)
+				data.FridayTimes[i].Guests = make([]string, 0)
 			} else if err != nil {
-				data.FridayTimes[i].Guests = make([]int, 0)
+				data.FridayTimes[i].Guests = make([]string, 0)
 			} else {
-				data.FridayTimes[i].Guests = make([]int, len(event.Attendees))
+				data.FridayTimes[i].Guests = make([]string, len(event.Attendees))
+				for k, email := range event.Attendees {
+					if name, err := s.store.getFriendName(email); err != nil {
+						data.FridayTimes[i].Guests[k] = email
+					} else {
+						data.FridayTimes[i].Guests[k] = name
+					}
+				}
 			}
 		}
 	}
@@ -411,25 +424,36 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 type TokenClaims struct {
-	Exp               int64  `json:"exp"`
-	Iat               int64  `json:"iat"`
-	AuthTime          int64  `json:"auth_time"`
-	Jti               string `json:"jti"`
-	Iss               string `json:"iss"`
-	Aud               string `json:"aud"`
-	Sub               string `json:"sub"`
-	Typ               string `json:"typ"`
-	Azp               string `json:"azp"`
-	SessionState      string `json:"session_state"`
-	At_hash           string `json:"at_hash"`
-	Acr               string `json:"acr"`
-	Sid               string `json:"sid"`
-	EmailVerified     bool   `json:"email_verified"`
-	Name              string `json:"name"`
-	PreferredUsername string `json:"preferred_username"`
-	GivenName         string `json:"given_name"`
-	FamilyName        string `json:"family_name"`
-	Email             string `json:"email"`
+	Exp               int64    `json:"exp"`
+	Iat               int64    `json:"iat"`
+	AuthTime          int64    `json:"auth_time"`
+	Jti               string   `json:"jti"`
+	Iss               string   `json:"iss"`
+	Aud               string   `json:"aud"`
+	Sub               string   `json:"sub"`
+	Typ               string   `json:"typ"`
+	Azp               string   `json:"azp"`
+	SessionState      string   `json:"session_state"`
+	At_hash           string   `json:"at_hash"`
+	Acr               string   `json:"acr"`
+	Sid               string   `json:"sid"`
+	EmailVerified     bool     `json:"email_verified"`
+	Name              string   `json:"name"`
+	PreferredUsername string   `json:"preferred_username"`
+	GivenName         string   `json:"given_name"`
+	FamilyName        string   `json:"family_name"`
+	Email             string   `json:"email"`
+	Groups            []string `json:"groups"`
+	Roles             []string `json:"roles"`
+}
+
+func (c *TokenClaims) HasRole(role string) bool {
+	for _, r := range c.Roles {
+		if r == role {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {

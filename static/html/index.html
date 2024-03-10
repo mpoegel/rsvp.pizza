@@ -16,7 +16,7 @@
         {{range .FridayTimes}}
         <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}">
         <label for="{{.Date}}">{{.Date}}</label><br>
-        <div class="guestLevel">{{range .Guests}}<span class="guest">&nbsp;</span>{{end}}<br></div>
+        <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}<br></div>
         {{else}}
         <p>There are no upcoming pizza fridays.</p>
         {{end}}
