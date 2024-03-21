@@ -28,7 +28,7 @@ func (a *SQLAccessor) CreateTables() error {
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	stmt = "create table fridays (start_time datetime)"
+	stmt = "create table fridays (start_time datetime not null primary key)"
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
