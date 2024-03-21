@@ -12,33 +12,6 @@ import (
 	zap "go.uber.org/zap"
 )
 
-func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
-	state := uuid.New()
-	rawAccessToken := r.Header.Get("Authorization")
-	if rawAccessToken == "" {
-		s.sessions[state.String()] = nil
-		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
-		return
-	}
-
-	authParts := strings.Split(rawAccessToken, " ")
-	if len(authParts) != 2 {
-		w.WriteHeader(400)
-		return
-	}
-
-	ctx := context.Background()
-	_, err := s.verifier.Verify(ctx, authParts[1])
-	if err != nil {
-		s.sessions[state.String()] = nil
-		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
-}
-
 type TokenClaims struct {
 	Exp               int64    `json:"exp"`
 	Iat               int64    `json:"iat"`
@@ -70,6 +43,53 @@ func (c *TokenClaims) HasRole(role string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
+	var claims *TokenClaims
+	for _, cookie := range r.Cookies() {
+		if cookie.Name == "session" {
+			var ok bool
+			claims, ok = s.sessions[cookie.Value]
+			// either bad session or auth has expired
+			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
+				delete(s.sessions, cookie.Value)
+				return nil, false
+			}
+		}
+	}
+	if claims == nil {
+		return nil, false
+	}
+
+	return claims, true
+}
+
+func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	state := uuid.New()
+	rawAccessToken := r.Header.Get("Authorization")
+	if rawAccessToken == "" {
+		s.sessions[state.String()] = nil
+		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
+		return
+	}
+
+	authParts := strings.Split(rawAccessToken, " ")
+	if len(authParts) != 2 {
+		w.WriteHeader(400)
+		return
+	}
+
+	ctx := context.Background()
+	_, err := s.verifier.Verify(ctx, authParts[1])
+	if err != nil {
+		s.sessions[state.String()] = nil
+		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("ok"))
 }
 
 func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {

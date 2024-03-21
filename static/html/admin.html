@@ -9,8 +9,27 @@
 <body>
     <h2>Pizza Admin</h2>
 
-    <p>Welcome</p>
+    <p>Hi {{.Name}}</p>
 
+    <form method="get" action="/admin/submit">
+        {{range .FridayTimes}}
+        {{if .Active}}
+        <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}" checked>
+        {{else}}
+        <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}">
+        {{end}}
+        <label for="{{.Date}}">{{.Date}}</label><br>
+        <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}<br></div>
+        {{end}}
+        <br>
+        <div id="submit">
+            <input type="submit" value="Update">
+        </div>
+    </form>
+
+    <br><br>
+    <a href="/">pizza</a> |
+    <a href="/logout">logout</a>
 </body>
 
 </html>

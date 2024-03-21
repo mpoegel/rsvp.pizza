@@ -3,13 +3,29 @@ package pizza
 import (
 	"net/http"
 	"path"
+	"strconv"
 	"text/template"
 	"time"
 
 	zap "go.uber.org/zap"
 )
 
-type AdminPageData struct {
+const futureFridayLimit = 90
+
+func getFutureFridays() []time.Time {
+	dates := make([]time.Time, 0)
+	loc, _ := time.LoadLocation("America/New_York")
+	start := time.Now()
+	friday := time.Date(start.Year(), start.Month(), start.Day(), 17, 30, 0, 0, loc)
+	for friday.Weekday() != time.Friday {
+		friday = friday.AddDate(0, 0, 1)
+	}
+	endDate := time.Now().AddDate(0, 0, futureFridayLimit)
+	for friday.Before(endDate) {
+		dates = append(dates, friday)
+		friday = friday.AddDate(0, 0, 7)
+	}
+	return dates
 }
 
 func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
@@ -19,22 +35,9 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		s.Handle500(w, r)
 		return
 	}
-	data := AdminPageData{}
 
-	var claims *TokenClaims
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == "session" {
-			var ok bool
-			claims, ok = s.sessions[cookie.Value]
-			// either bad session or auth has expired
-			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
-				delete(s.sessions, cookie.Value)
-				http.Redirect(w, r, "/login", http.StatusFound)
-				return
-			}
-		}
-	}
-	if claims == nil {
+	claims, ok := s.authenticateRequest(r)
+	if !ok {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
@@ -44,9 +47,90 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := PageData{
+		Name: claims.GivenName,
+	}
+
+	allFridays := getFutureFridays()
+	setFridays, err := s.store.GetUpcomingFridays(futureFridayLimit)
+	if err != nil {
+		Log.Error("failed to get fridays", zap.Error(err))
+		s.Handle500(w, r)
+		return
+	}
+	Log.Info("set fridays", zap.Times("dates", setFridays))
+	fridayIndex := 0
+	data.FridayTimes = make([]IndexFridayData, 0)
+	for _, friday := range allFridays {
+		f := IndexFridayData{
+			Date:   friday.Format(time.RFC822),
+			ID:     friday.Unix(),
+			Guests: nil,
+			Active: false,
+		}
+		if fridayIndex < len(setFridays) && friday.Equal(setFridays[fridayIndex]) {
+			f.Active = true
+			fridayIndex++
+		}
+		data.FridayTimes = append(data.FridayTimes, f)
+	}
+
 	if err = plate.Execute(w, data); err != nil {
 		Log.Error("template execution failure", zap.Error(err))
 		s.Handle500(w, r)
 		return
 	}
+}
+
+func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
+	claims, ok := s.authenticateRequest(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	if !claims.HasRole("pizza_host") {
+		s.Handle4xx(w, r)
+		return
+	}
+
+	form := r.URL.Query()
+	dates := form["date"]
+	loc, _ := time.LoadLocation("America/New_York")
+	dateIndex := 0
+	allFridays := getFutureFridays()
+	for _, d := range allFridays {
+		f := time.Now().AddDate(1, 0, 0).In(loc)
+		if dateIndex < len(dates) {
+			num, err := strconv.ParseInt(dates[dateIndex], 10, 64)
+			if err != nil {
+				Log.Error("failed parsing date int from rsvp form", zap.String("date", dates[dateIndex]))
+				s.Handle500(w, r)
+				return
+			}
+			f = time.Unix(num, 0).In(loc)
+		}
+		if d.Equal(f) {
+			// friday selected, so add it
+			err := s.store.accessor.AddFriday(f)
+			if err != nil {
+				Log.Error("failed to add friday", zap.Error(err))
+			} else {
+				Log.Info("added friday", zap.Time("date", f))
+			}
+			dateIndex++
+		} else if f.After(d) {
+			// friday is not selected, so remove it
+			err := s.store.accessor.RemoveFriday(d)
+			if err != nil {
+				Log.Error("failed to remove friday", zap.Error(err))
+			} else {
+				Log.Info("removed friday", zap.Time("date", d))
+			}
+		} else {
+			// f.Before(d) == true
+			// do nothing
+		}
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusFound)
 }

@@ -44,7 +44,7 @@ type Server struct {
 	sessions map[string]*TokenClaims
 }
 
-func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
+func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	r := mux.NewRouter()
 
 	var accessor Accessor
@@ -53,7 +53,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 		Log.Info("using the sqlite accessor")
 		accessor, err = NewSQLAccessor(config.DBFile)
 		if err != nil {
-			return Server{}, err
+			return nil, err
 		}
 	} else if len(config.FaunaSecret) > 0 {
 		Log.Info("using the faunadb accessor")
@@ -64,18 +64,18 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 
 	googleCal, err := NewGoogleCalendar(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, context.Background())
 	if err != nil {
-		return Server{}, err
+		return nil, err
 	}
 
 	ctx := context.Background()
 	provider, err := oidc.NewProvider(ctx, config.OAuth2.KeycloakURL+"/realms/"+config.OAuth2.Realm)
 	if err != nil {
-		return Server{}, err
+		return nil, err
 	}
 	k, err := NewKeycloak(config.OAuth2)
 	if err != nil {
 		Log.Error("keycloak failure", zap.Error(err))
-		return Server{}, err
+		return nil, err
 	}
 
 	s := Server{
@@ -125,8 +125,9 @@ func NewServer(config Config, metricsReg MetricsRegistry) (Server, error) {
 	r.HandleFunc("/login/callback", s.HandleLoginCallback)
 	r.HandleFunc("/logout", s.HandleLogout)
 	r.HandleFunc("/admin", s.HandleAdmin)
+	r.HandleFunc("/admin/submit", s.HandleAdminSubmit)
 
-	return s, nil
+	return &s, nil
 }
 
 func (s *Server) Start() error {
@@ -163,6 +164,7 @@ type IndexFridayData struct {
 	Date   string
 	ID     int64
 	Guests []string
+	Active bool
 }
 
 type PageData struct {
@@ -185,22 +187,8 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		LoggedIn: false,
 	}
 
-	var claims *TokenClaims
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == "session" {
-			var ok bool
-			claims, ok = s.sessions[cookie.Value]
-			// either bad session or auth has expired
-			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
-				Log.Debug("cookie session invalid or expired")
-				delete(s.sessions, cookie.Value)
-				break
-			}
-		}
-	}
-	if claims == nil {
-		Log.Debug("no login cookies found")
-	} else {
+	claims, ok := s.authenticateRequest(r)
+	if ok {
 		data.LoggedIn = true
 
 		Log.Info("welcome", zap.String("name", claims.Name))
@@ -250,20 +238,8 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	s.submitPostMetric.Increment()
 
-	var claims *TokenClaims
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == "session" {
-			var ok bool
-			claims, ok = s.sessions[cookie.Value]
-			// either bad session or auth has expired
-			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
-				delete(s.sessions, cookie.Value)
-				http.Redirect(w, r, "/login", http.StatusFound)
-				return
-			}
-		}
-	}
-	if claims == nil {
+	claims, ok := s.authenticateRequest(r)
+	if !ok {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
