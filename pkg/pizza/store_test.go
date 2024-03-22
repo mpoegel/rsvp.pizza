@@ -70,6 +70,11 @@ func (m *MockAccessor) RemoveFriday(date time.Time) error {
 	return args.Error(0)
 }
 
+func (m *MockAccessor) DoesFridayExist(date time.Time) (bool, error) {
+	args := m.Called(date)
+	return args.Bool(0), args.Error(1)
+}
+
 func TestStore_IsFriendAllowed(t *testing.T) {
 	// GIVEN
 	friend := "ted@tedlasso.com"

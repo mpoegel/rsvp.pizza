@@ -263,22 +263,7 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(claims.Email)
 	Log.Debug("rsvp request", zap.String("email", email), zap.Strings("dates", dates))
 
-	if ok, err := s.store.IsFriendAllowed(email); !ok {
-		if err != nil {
-			Log.Error("error checking email for rsvp request", zap.Error(err))
-			s.Handle500(w, r)
-		} else {
-			s.Handle4xx(w, r)
-		}
-		return
-	}
-
-	friendName, err := s.store.GetFriendName(email)
-	if err != nil {
-		Log.Error("could not get friend name", zap.Error(err), zap.String("email", email))
-		s.Handle500(w, r)
-		return
-	}
+	friendName := claims.GivenName
 
 	newEvent := CalendarEvent{
 		AnyoneCanAddSelf:      false,
