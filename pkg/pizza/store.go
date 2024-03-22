@@ -11,6 +11,7 @@ type Accessor interface {
 	GetFriendName(email string) (string, error)
 	GetUpcomingFridays(daysAhead int) ([]time.Time, error)
 	GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error)
+	DoesFridayExist(date time.Time) (bool, error)
 	AddFriday(date time.Time) error
 	AddFriend(email, name string) error
 	ListFriends() ([]Friend, error)

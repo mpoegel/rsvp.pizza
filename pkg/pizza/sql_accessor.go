@@ -94,7 +94,34 @@ func (a *SQLAccessor) AddFriend(email, name string) error {
 	return err
 }
 
+func (a *SQLAccessor) DoesFridayExist(date time.Time) (bool, error) {
+	stmt, err := a.db.Prepare("SELECT COUNT(*) FROM fridays WHERE start_time = ?")
+	if err != nil {
+		return false, err
+	}
+	rows, err := stmt.Query(date)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	var count int
+	if !rows.Next() {
+		return false, nil
+	}
+	if err = rows.Scan(&count); err != nil {
+		return false, err
+	}
+	return count == 1, nil
+}
+
 func (a *SQLAccessor) AddFriday(date time.Time) error {
+	exists, err := a.DoesFridayExist(date)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
 	stmt, err := a.db.Prepare("insert into fridays (start_time) values (?)")
 	if err != nil {
 		return nil

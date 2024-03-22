@@ -186,3 +186,8 @@ func (c *FaunaClient) RemoveFriday(date time.Time) error {
 	Log.Panic("not implemented")
 	return nil
 }
+
+func (c *FaunaClient) DoesFridayExist(date time.Time) (bool, error) {
+	Log.Panic("not implemented")
+	return false, nil
+}

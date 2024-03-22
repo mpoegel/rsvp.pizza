@@ -58,7 +58,6 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		s.Handle500(w, r)
 		return
 	}
-	Log.Info("set fridays", zap.Times("dates", setFridays))
 	fridayIndex := 0
 	data.FridayTimes = make([]IndexFridayData, 0)
 	for _, friday := range allFridays {
@@ -111,20 +110,32 @@ func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		if d.Equal(f) {
 			// friday selected, so add it
-			err := s.store.accessor.AddFriday(f)
-			if err != nil {
-				Log.Error("failed to add friday", zap.Error(err))
-			} else {
-				Log.Info("added friday", zap.Time("date", f))
+			if exists, err := s.store.accessor.DoesFridayExist(f); err != nil {
+				Log.Error("failed check friday", zap.Error(err))
+				continue
+			} else if !exists {
+				err := s.store.accessor.AddFriday(f)
+				if err != nil {
+					Log.Error("failed to add friday", zap.Error(err))
+				} else {
+					Log.Info("added friday", zap.Time("date", f))
+				}
 			}
 			dateIndex++
 		} else if f.After(d) {
 			// friday is not selected, so remove it
-			err := s.store.accessor.RemoveFriday(d)
-			if err != nil {
-				Log.Error("failed to remove friday", zap.Error(err))
-			} else {
-				Log.Info("removed friday", zap.Time("date", d))
+			// TODO also delete calendar event
+			// TODO warn if users have already RSVP'ed
+			if exists, err := s.store.accessor.DoesFridayExist(d); err != nil {
+				Log.Error("failed to check friday", zap.Error(err))
+				continue
+			} else if exists {
+				err := s.store.accessor.RemoveFriday(d)
+				if err != nil {
+					Log.Error("failed to remove friday", zap.Error(err))
+				} else {
+					Log.Info("removed friday", zap.Time("date", d))
+				}
 			}
 		} else {
 			// f.Before(d) == true
