@@ -29,8 +29,6 @@ type Config struct {
 	ShutdownTimeout time.Duration  `yaml:"shutdownTimeout"`
 	Calendar        CalendarConfig `yaml:"calendar"`
 	MetricsPort     int            `yaml:"metricsPort"`
-	FaunaSecret     string         `yaml:"faunaSecret"`
-	UseSQLite       bool           `yaml:"useSQLite"`
 	DBFile          string         `yaml:"dbFile"`
 	OAuth2          OAuth2Config
 }
@@ -100,8 +98,6 @@ func LoadConfigEnv() Config {
 			ID:             loadStrEnv("CALENDAR_ID", "primary"),
 		},
 		MetricsPort: loadIntEnv("METRICS_PORT", 5050),
-		FaunaSecret: loadStrEnv("FAUNADB_SECRET", ""),
-		UseSQLite:   loadBoolEnv("USE_SQLITE", true),
 		DBFile:      loadStrEnv("DBFILE", "pizza.db"),
 		OAuth2: OAuth2Config{
 			ClientID:     loadStrEnv("OAUTH2_CLIENT_ID", ""),

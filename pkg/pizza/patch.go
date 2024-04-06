@@ -16,13 +16,9 @@ func Patch(args []string) {
 	config := LoadConfigEnv()
 	var accessor *SQLAccessor
 	var err error
-	if config.UseSQLite {
-		accessor, err = NewSQLAccessor(config.DBFile)
-		if err != nil {
-			Log.Fatal("sql accessor init failure", zap.Error(err))
-		}
-	} else {
-		Log.Fatal("must use sql accessor")
+	accessor, err = NewSQLAccessor(config.DBFile)
+	if err != nil {
+		Log.Fatal("sql accessor init failure", zap.Error(err))
 	}
 
 	if *isInit {

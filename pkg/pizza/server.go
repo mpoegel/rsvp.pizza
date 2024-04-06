@@ -49,17 +49,10 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 
 	var accessor Accessor
 	var err error
-	if config.UseSQLite {
-		Log.Info("using the sqlite accessor")
-		accessor, err = NewSQLAccessor(config.DBFile)
-		if err != nil {
-			return nil, err
-		}
-	} else if len(config.FaunaSecret) > 0 {
-		Log.Info("using the faunadb accessor")
-		accessor = NewFaunaClient(config.FaunaSecret)
-	} else {
-		panic("no FAUNADB_SECRET found")
+	Log.Info("using the sqlite accessor")
+	accessor, err = NewSQLAccessor(config.DBFile)
+	if err != nil {
+		return nil, err
 	}
 
 	googleCal, err := NewGoogleCalendar(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, context.Background())

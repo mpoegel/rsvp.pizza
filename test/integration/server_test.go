@@ -14,7 +14,6 @@ import (
 
 func TestHandleIndex(t *testing.T) {
 	// GIVEN
-	pizza.StaticDir = "../../static"
 	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
 	require.Nil(t, err)
 	server, err := pizza.NewServer(config, nil)
@@ -33,7 +32,6 @@ func TestHandleIndex(t *testing.T) {
 
 func TestHandleSubmit(t *testing.T) {
 	// GIVEN
-	pizza.StaticDir = "../../static"
 	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
 	require.Nil(t, err)
 	server, err := pizza.NewServer(config, nil)

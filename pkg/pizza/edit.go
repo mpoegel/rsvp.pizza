@@ -26,11 +26,9 @@ func Edit(args []string) {
 	config := LoadConfigEnv()
 	var accessor Accessor
 	var err error
-	if config.UseSQLite {
-		accessor, err = NewSQLAccessor(config.DBFile)
-		if err != nil {
-			Log.Fatal("sql accessor init failure", zap.Error(err))
-		}
+	accessor, err = NewSQLAccessor(config.DBFile)
+	if err != nil {
+		Log.Fatal("sql accessor init failure", zap.Error(err))
 	}
 
 	if len(*add) > 0 {
