@@ -88,7 +88,7 @@ func (c *GoogleCalendar) getCalendarEvent(eventID string) (*calendar.Event, erro
 	// TODO add timeout
 	if event, err := c.srv.Events.Get(c.id, eventID).Do(); err == nil {
 		return event, nil
-	} else if err != nil && err.Error() == "googleapi: Error 404: Not Found, notFound" {
+	} else if err.Error() == "googleapi: Error 404: Not Found, notFound" {
 		return nil, ErrEventNotFound
 	} else {
 		return nil, err

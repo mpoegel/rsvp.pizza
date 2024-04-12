@@ -6,6 +6,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var AllPatches []func(*SQLAccessor) error
+
 func Patch(args []string) {
 	fs := flag.NewFlagSet("patch", flag.ExitOnError)
 	isInit := fs.Bool("init", false, "initialize all tables")
@@ -28,6 +30,8 @@ func Patch(args []string) {
 	switch *n {
 	case 1:
 		err = Patch001(accessor)
+	case 2:
+		err = Patch002(accessor)
 	}
 
 	if err != nil {
@@ -42,5 +46,17 @@ func Patch001(a *SQLAccessor) error {
 			DROP TABLE fridays;
 			ALTER TABLE fridays_new RENAME TO fridays`
 	_, err := a.db.Exec(stmt)
+	return err
+}
+
+func Patch002(a *SQLAccessor) error {
+	// create the versions table
+	stmt := `CREATE TABLE IF NOT EXISTS app_versions (name text NOT NULL PRIMARY KEY, version int NOT NULL)`
+	_, err := a.db.Exec(stmt)
+	if err != nil {
+		return err
+	}
+	stmt = `INSERT INTO app_versions (name, version) VALUES ('schema', 2)`
+	_, err = a.db.Exec(stmt)
 	return err
 }

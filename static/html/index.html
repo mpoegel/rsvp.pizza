@@ -27,6 +27,9 @@
     </form>
 
     <br><br>
+    {{if .IsAdmin}}
+    <a href="/admin">admin</a>
+    {{end}}
     <a href="{{.LogoutURL}}">logout</a>
 
     {{else}}

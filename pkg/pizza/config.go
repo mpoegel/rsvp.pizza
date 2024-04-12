@@ -19,6 +19,11 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("could not create logger: %v", err))
 	}
+	AllPatches = []func(*SQLAccessor) error{
+		func(*SQLAccessor) error { return nil },
+		Patch001,
+		Patch002,
+	}
 }
 
 type Config struct {

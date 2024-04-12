@@ -16,7 +16,8 @@ func NewSQLAccessor(dbfile string) (*SQLAccessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SQLAccessor{db}, nil
+	a := &SQLAccessor{db}
+	return a, a.PatchTables()
 }
 
 func (a *SQLAccessor) Close() {
@@ -24,15 +25,41 @@ func (a *SQLAccessor) Close() {
 }
 
 func (a *SQLAccessor) CreateTables() error {
-	stmt := "create table friends (email text not null primary key, name text)"
+	stmt := "CREATE TABLE friends (email text NOT NULL PRIMARY KEY, name text)"
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	stmt = "create table fridays (start_time datetime not null primary key)"
+	stmt = "CREATE TABLE fridays (start_time datetime NOT NULL PRIMARY KEY)"
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	return nil
+	stmt = "CREATE TABLE versions (name text NOT NULL PRIMARY KEY, version int NOT NULL)"
+	if _, err := a.db.Exec(stmt); err != nil {
+		return err
+	}
+	_, err := a.db.Exec(`INSERT INTO app_versions (name, version) VALUES ('schema', 2)`)
+	return err
+}
+
+func (a *SQLAccessor) PatchTables() error {
+	var schemaVersion int
+	if err := a.db.QueryRow("SELECT version FROM app_versions WHERE name='schema'").Scan(&schemaVersion); err != nil {
+		// minimum patch 2 is required
+		return err
+	}
+	// apply missing patches
+	for p := schemaVersion + 1; p < len(AllPatches); p++ {
+		if err := AllPatches[p](a); err != nil {
+			return err
+		}
+	}
+	// save new schema version
+	stmt, err := a.db.Prepare("UPDATE app_versions SET version=? WHERE name='schema'")
+	if err != nil {
+		return nil
+	}
+	_, err = stmt.Exec(len(AllPatches) - 1)
+	return err
 }
 
 func (a *SQLAccessor) IsFriendAllowed(email string) (bool, error) {

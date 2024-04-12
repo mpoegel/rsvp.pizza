@@ -165,6 +165,7 @@ type PageData struct {
 	Name        string
 	LoggedIn    bool
 	LogoutURL   string
+	IsAdmin     bool
 }
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
@@ -183,6 +184,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	claims, ok := s.authenticateRequest(r)
 	if ok {
 		data.LoggedIn = true
+		data.IsAdmin = claims.HasRole("pizza_host")
 
 		Log.Info("welcome", zap.String("name", claims.Name))
 		data.Name = claims.GivenName

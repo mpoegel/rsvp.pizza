@@ -71,6 +71,24 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 			f.Active = true
 			fridayIndex++
 		}
+
+		eventID := strconv.FormatInt(f.ID, 10)
+		if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
+			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
+			f.Guests = make([]string, 0)
+		} else if err != nil {
+			f.Guests = make([]string, 0)
+		} else {
+			f.Guests = make([]string, len(event.Attendees))
+			for k, email := range event.Attendees {
+				if name, err := s.store.getFriendName(email); err != nil {
+					f.Guests[k] = email
+				} else {
+					f.Guests[k] = name
+				}
+			}
+		}
+
 		data.FridayTimes = append(data.FridayTimes, f)
 	}
 
@@ -124,7 +142,6 @@ func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
 			dateIndex++
 		} else if f.After(d) {
 			// friday is not selected, so remove it
-			// TODO also delete calendar event
 			// TODO warn if users have already RSVP'ed
 			if exists, err := s.store.accessor.DoesFridayExist(d); err != nil {
 				Log.Error("failed to check friday", zap.Error(err))
@@ -136,11 +153,13 @@ func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
 				} else {
 					Log.Info("removed friday", zap.Time("date", d))
 				}
+				// NOTE the calendar event must be deleted manually
 			}
-		} else {
-			// f.Before(d) == true
-			// do nothing
 		}
+		// else {
+		// f.Before(d) == true
+		// do nothing
+		// }
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusFound)
