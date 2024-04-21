@@ -5,7 +5,6 @@ go 1.21
 require (
 	github.com/Nerzal/gocloak/v13 v13.9.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
-	github.com/fauna/faunadb-go/v4 v4.2.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.19

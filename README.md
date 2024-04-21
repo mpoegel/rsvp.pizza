@@ -4,7 +4,7 @@ rsvp.pizza is a web application for collecting RSVP's to your pizza parties. You
 
 ## Installing
 
-Before installing rsvp.pizza, you'll need to get OAuth2 credentials for the Google Calendar API and create a Fauna database.
+Before installing rsvp.pizza, you'll need to get OAuth2 credentials for the Google Calendar API and initialize the database.
 
 ### How to get calendar credentials
 1. [Start here](https://support.google.com/googleapi/answer/6158849?hl=en&ref_topic=7013279) to create an OAuth Desktop Application.
@@ -13,25 +13,13 @@ Before installing rsvp.pizza, you'll need to get OAuth2 credentials for the Goog
 4. Copy the printed URL to your web browser and complete the steps to log in with your Google account.
 5. Copy the code from the final URL that you're redirected to on localhost that does not exist.
 
-### Create the Fauna Database
-1. Create a free [Fauna](https://dashboard.fauna.com/) account and create your pizza database.
-2. Create the collections.
+### Initialize the database
+```sh
+rsvp.pizza patch -init
+```
 
-`fridays`, a collection of documents that contain the dates of your pizza parties.
-  ```json
-{
-    "date": Time("2023-04-07T21:30:00Z")
-}
-  ```
-`friends`, a collection of documents that contain your friends' contact information.
-  ```json
-{
-    "name": "Ted Lasso",
-    "email": "believe@tedlasso.com"
-}
-  ```
-3. Create an `all_emails` index that allows the friends collection to be search by email. Create an `all_fridays` index that returns all the dates in the fridays collection. Create `all_fridays_range` index that returns all the dates and refs in the fridays collection.
-4. Create and download a database access key for your database.
+### Setup OAuth2 Server
+Configure an OAuth2 server such as Keycloak. Create a client application to get the Client ID and Client Server.
 
 ### Install the package
 1. Download the latest version
@@ -49,9 +37,7 @@ sudo tar xzfv rsvp.pizza_Linux_x86_64.tar.gz -C /
 4. Adjust the environment variables and config file.
 ```sh
 cp /etc/pizza/.env /etc/pizza/.env.prod
-cp /etc/pizza/pizza.yaml /etc/pizza/pizza.prod.yaml
 sudo vim /etc/pizza/.env.prod
-sudo vim /etc/pizza/pizza.prod.yaml
 ```
 5. Adjust the nginx config.
 ```sh
