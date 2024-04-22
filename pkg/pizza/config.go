@@ -23,6 +23,7 @@ func init() {
 		func(*SQLAccessor) error { return nil },
 		Patch001,
 		Patch002,
+		Patch003,
 	}
 }
 

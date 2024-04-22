@@ -25,7 +25,7 @@ type WrappedData struct {
 
 type Server struct {
 	s        http.Server
-	store    *Store
+	store    Accessor
 	calendar *Calendar
 	config   Config
 
@@ -78,7 +78,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 			WriteTimeout: config.WriteTimeout,
 			Handler:      r,
 		},
-		store:    NewStore(accessor),
+		store:    accessor,
 		calendar: NewCalendar(googleCal),
 		config:   config,
 
@@ -198,8 +198,14 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		}
 
 		estZone, _ := time.LoadLocation("America/New_York")
-		data.FridayTimes = make([]IndexFridayData, len(fridays))
-		for i, t := range fridays {
+		data.FridayTimes = make([]IndexFridayData, 0)
+		for i, friday := range fridays {
+			if friday.Group != nil && !claims.InGroup(*friday.Group) {
+				// skip friday when the user is not in the invited group
+				continue
+			}
+			data.FridayTimes = append(data.FridayTimes, IndexFridayData{})
+			t := friday.Date
 			t = t.In(estZone)
 			data.FridayTimes[i].Date = t.Format(time.RFC822)
 			data.FridayTimes[i].ID = t.Unix()
@@ -213,7 +219,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			} else {
 				data.FridayTimes[i].Guests = make([]string, len(event.Attendees))
 				for k, email := range event.Attendees {
-					if name, err := s.store.getFriendName(email); err != nil {
+					if name, err := s.store.GetFriendName(email); err != nil {
 						data.FridayTimes[i].Guests[k] = email
 					} else {
 						data.FridayTimes[i].Guests[k] = name

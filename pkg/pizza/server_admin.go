@@ -67,7 +67,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 			Guests: nil,
 			Active: false,
 		}
-		if fridayIndex < len(setFridays) && friday.Equal(setFridays[fridayIndex]) {
+		if fridayIndex < len(setFridays) && friday.Equal(setFridays[fridayIndex].Date) {
 			f.Active = true
 			fridayIndex++
 		}
@@ -81,7 +81,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		} else {
 			f.Guests = make([]string, len(event.Attendees))
 			for k, email := range event.Attendees {
-				if name, err := s.store.getFriendName(email); err != nil {
+				if name, err := s.store.GetFriendName(email); err != nil {
 					f.Guests[k] = email
 				} else {
 					f.Guests[k] = name
@@ -128,11 +128,11 @@ func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		if d.Equal(f) {
 			// friday selected, so add it
-			if exists, err := s.store.accessor.DoesFridayExist(f); err != nil {
+			if exists, err := s.store.DoesFridayExist(f); err != nil {
 				Log.Error("failed check friday", zap.Error(err))
 				continue
 			} else if !exists {
-				err := s.store.accessor.AddFriday(f)
+				err := s.store.AddFriday(f)
 				if err != nil {
 					Log.Error("failed to add friday", zap.Error(err))
 				} else {
@@ -143,11 +143,11 @@ func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
 		} else if f.After(d) {
 			// friday is not selected, so remove it
 			// TODO warn if users have already RSVP'ed
-			if exists, err := s.store.accessor.DoesFridayExist(d); err != nil {
+			if exists, err := s.store.DoesFridayExist(d); err != nil {
 				Log.Error("failed to check friday", zap.Error(err))
 				continue
 			} else if exists {
-				err := s.store.accessor.RemoveFriday(d)
+				err := s.store.RemoveFriday(d)
 				if err != nil {
 					Log.Error("failed to remove friday", zap.Error(err))
 				} else {

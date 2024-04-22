@@ -45,6 +45,15 @@ func (c *TokenClaims) HasRole(role string) bool {
 	return false
 }
 
+func (c *TokenClaims) InGroup(group string) bool {
+	for _, g := range c.Groups {
+		if g == group {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
 	var claims *TokenClaims
 	for _, cookie := range r.Cookies() {

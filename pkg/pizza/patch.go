@@ -60,3 +60,10 @@ func Patch002(a *SQLAccessor) error {
 	_, err = a.db.Exec(stmt)
 	return err
 }
+
+func Patch003(a *SQLAccessor) error {
+	stmt := `ALTER TABLE fridays ADD COLUMN invited_group text;
+			ALTER TABLE fridays ADD COLUMN details text;`
+	_, err := a.db.Exec(stmt)
+	return err
+}

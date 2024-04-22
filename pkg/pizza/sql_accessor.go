@@ -85,13 +85,13 @@ func (a *SQLAccessor) GetFriendName(email string) (string, error) {
 	return name, err
 }
 
-func (a *SQLAccessor) GetUpcomingFridays(daysAhead int) ([]time.Time, error) {
+func (a *SQLAccessor) GetUpcomingFridays(daysAhead int) ([]Friday, error) {
 	return a.GetUpcomingFridaysAfter(time.Now(), daysAhead)
 }
 
-func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]time.Time, error) {
+func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]Friday, error) {
 	before := after.AddDate(0, 0, daysAhead)
-	stmt, err := a.db.Prepare("select start_time from fridays where start_time <= ? and start_time >= ?")
+	stmt, err := a.db.Prepare("select start_time, invited_group, details from fridays where start_time <= ? and start_time >= ?")
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +100,10 @@ func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([
 		return nil, err
 	}
 	defer rows.Close()
-	result := make([]time.Time, 0)
+	result := make([]Friday, 0)
 	for rows.Next() {
-		var friday time.Time
-		err = rows.Scan(&friday)
+		var friday Friday
+		err = rows.Scan(&friday.Date, &friday.Group, &friday.Details)
 		if err != nil {
 			return nil, err
 		}

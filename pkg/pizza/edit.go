@@ -200,7 +200,7 @@ func interactiveEdit(accessor Accessor) {
 			fi := 0
 			for i, t := range nextFourFridays {
 				symbol := " "
-				if fi < len(scheduledFridays) && t.Equal(scheduledFridays[fi]) {
+				if fi < len(scheduledFridays) && t.Equal(scheduledFridays[fi].Date) {
 					symbol = "✔"
 					fi++
 				}
