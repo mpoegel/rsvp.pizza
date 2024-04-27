@@ -24,7 +24,7 @@ a {
 }
 
 .guestLevel {
-    text-align: right;
+    text-align: left;
     width: 50%;
 }
 
@@ -39,18 +39,32 @@ a {
     margin: 1px;
 }
 
+.friday-time {
+    padding-top: 20px;
+    padding-bottom: 5px;
+}
+
+.btn {
+    color: black;
+}
+
+.btn-rsvp {
+    display: flex;
+    justify-content: flex-end;
+}
+
 @media (max-width: 600px) {
     body {
         font-size: 1.5em;
         width: 100%;
     }
 
-    #submit {
-        margin-top: 50px;
-        width: 150px;
+    #friday-table {
+        width: 100%;
     }
 
-    #submit input {
+    .btn-rsvp .btn {
+        margin-top: 50px;
         width: 150px;
         font-size: 1.1em;
     }
@@ -66,7 +80,7 @@ a {
         width: 600px;
     }
 
-    #submit {
-        margin-left: 0px;
+    #friday-table {
+        width: 50%;
     }
 }

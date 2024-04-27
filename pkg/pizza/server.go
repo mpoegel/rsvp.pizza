@@ -111,7 +111,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	}
 
 	r.HandleFunc("/", s.HandleIndex)
-	r.HandleFunc("/submit", s.HandleSubmit)
+	r.HandleFunc("/rsvp", s.HandleRSVP)
 	r.HandleFunc("/wrapped", s.HandledWrapped)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
 	r.HandleFunc("/login", s.HandleLogin)
@@ -236,29 +236,19 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
-	s.submitPostMetric.Increment()
-
+func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 	claims, ok := s.authenticateRequest(r)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 		return
 	}
-
-	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/submit.html"))
-	if err != nil {
-		Log.Error("template submit failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
-	data := PageData{}
 
 	Log.Debug("incoming submit request", zap.Stringer("url", r.URL))
 
 	form := r.URL.Query()
 	dates, ok := form["date"]
 	if !ok {
-		s.Handle4xx(w, r)
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 		return
 	}
 	email := strings.ToLower(claims.Email)
@@ -285,7 +275,7 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		num, err := strconv.ParseInt(d, 10, 64)
 		if err != nil {
 			Log.Error("failed parsing date int from rsvp form", zap.String("date", d))
-			s.Handle500(w, r)
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 			return
 		}
 		pendingDates[i] = time.Unix(num, 0)
@@ -297,24 +287,20 @@ func (s *Server) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		if err != nil && err == ErrEventNotFound {
 			if err = s.calendar.CreateEvent(newEvent); err != nil {
 				Log.Error("could not create event", zap.String("eventID", d), zap.String("email", email))
-				s.Handle500(w, r)
+				template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_error.html"))).Execute(w, nil)
 				return
 			}
 			err = s.calendar.InviteToEvent(d, email, friendName)
 		}
 		if err != nil {
 			Log.Error("invite failed", zap.String("eventID", d), zap.String("email", email))
-			s.Handle500(w, r)
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_error.html"))).Execute(w, nil)
 			return
 		}
 		Log.Debug("event updated", zap.String("eventID", d), zap.String("email", email), zap.String("name", friendName))
 	}
 
-	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
+	template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_success.html"))).Execute(w, nil)
 }
 
 func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {

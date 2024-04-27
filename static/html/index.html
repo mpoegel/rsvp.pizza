@@ -3,6 +3,7 @@
 
 <head>
     <link rel="stylesheet" href="/static/css/index.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
@@ -12,19 +13,20 @@
     {{if .LoggedIn}}
     <p>Hi {{.Name}}</p>
 
-    <form method="get" action="/submit">
+    <table id="friday-table">
         {{range .FridayTimes}}
-        <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}">
-        <label for="{{.Date}}">{{.Date}}</label><br>
-        <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}<br></div>
-        {{else}}
-        <p>There are no upcoming pizza fridays.</p>
+        <tr>
+            <td class="friday-time">
+                <label for="{{.Date}}">{{.Date}}</label><br>
+                <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}<br>
+                </div>
+                <div class="btn-rsvp">
+                    <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-swap="outerHTML">RSVP</button>
+                </div>
+            </td>
+        </tr>
         {{end}}
-        <br>
-        <div id="submit">
-            <input type="submit" value="Submit">
-        </div>
-    </form>
+    </table>
 
     <br><br>
     {{if .IsAdmin}}
