@@ -118,7 +118,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	r.HandleFunc("/login/callback", s.HandleLoginCallback)
 	r.HandleFunc("/logout", s.HandleLogout)
 	r.HandleFunc("/admin", s.HandleAdmin)
-	r.HandleFunc("/admin/submit", s.HandleAdminSubmit)
+	r.HandleFunc("/admin/edit", s.HandleAdminEdit)
 
 	return &s, nil
 }
@@ -154,10 +154,12 @@ func (s *Server) WatchCalendar(period time.Duration) {
 }
 
 type IndexFridayData struct {
-	Date   string
-	ID     int64
-	Guests []string
-	Active bool
+	Date    string
+	ID      int64
+	Guests  []string
+	Active  bool
+	Group   string
+	Details string
 }
 
 type PageData struct {

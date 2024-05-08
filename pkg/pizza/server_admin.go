@@ -1,6 +1,7 @@
 package pizza
 
 import (
+	"fmt"
 	"net/http"
 	"path"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 	zap "go.uber.org/zap"
 )
 
-const futureFridayLimit = 90
+const futureFridayLimit = 30
 
 func getFutureFridays() []time.Time {
 	dates := make([]time.Time, 0)
@@ -29,12 +30,6 @@ func getFutureFridays() []time.Time {
 }
 
 func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
-	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/admin.html"))
-	if err != nil {
-		Log.Error("template submit failure", zap.Error(err))
-		s.Handle500(w, r)
-		return
-	}
 
 	claims, ok := s.authenticateRequest(r)
 	if !ok {
@@ -44,6 +39,18 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	if !claims.HasRole("pizza_host") {
 		s.Handle4xx(w, r)
+		return
+	}
+
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/admin.html"))
+	if err != nil {
+		Log.Error("template submit failure", zap.Error(err))
+		s.Handle500(w, r)
+		return
+	}
+	if _, err = plate.ParseGlob(path.Join(s.config.StaticDir, "html/snippets/*.html")); err != nil {
+		Log.Error("template snippets submit failure", zap.Error(err))
+		s.Handle500(w, r)
 		return
 	}
 
@@ -62,10 +69,12 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 	data.FridayTimes = make([]IndexFridayData, 0)
 	for _, friday := range allFridays {
 		f := IndexFridayData{
-			Date:   friday.Format(time.RFC822),
-			ID:     friday.Unix(),
-			Guests: nil,
-			Active: false,
+			Date:    friday.Format(time.RFC822),
+			ID:      friday.Unix(),
+			Guests:  nil,
+			Active:  false,
+			Group:   "",
+			Details: "",
 		}
 		if fridayIndex < len(setFridays) && friday.Equal(setFridays[fridayIndex].Date) {
 			f.Active = true
@@ -92,75 +101,64 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		data.FridayTimes = append(data.FridayTimes, f)
 	}
 
-	if err = plate.Execute(w, data); err != nil {
+	if err = plate.ExecuteTemplate(w, "Admin", data); err != nil {
 		Log.Error("template execution failure", zap.Error(err))
 		s.Handle500(w, r)
 		return
 	}
 }
 
-func (s *Server) HandleAdminSubmit(w http.ResponseWriter, r *http.Request) {
-	claims, ok := s.authenticateRequest(r)
-	if !ok {
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
-	}
-	if !claims.HasRole("pizza_host") {
-		s.Handle4xx(w, r)
-		return
-	}
+func getToast(msg string) []byte {
+	return []byte(fmt.Sprintf(`<span class="toast">%s</span>`, msg))
+}
 
+func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		Log.Error("form parse failure on admin edit", zap.Error(err))
+		w.Write(getToast("bad request"))
+		return
+	}
 	form := r.URL.Query()
-	dates := form["date"]
-	loc, _ := time.LoadLocation("America/New_York")
-	dateIndex := 0
-	allFridays := getFutureFridays()
-	for _, d := range allFridays {
-		f := time.Now().AddDate(1, 0, 0).In(loc)
-		if dateIndex < len(dates) {
-			num, err := strconv.ParseInt(dates[dateIndex], 10, 64)
-			if err != nil {
-				Log.Error("failed parsing date int from rsvp form", zap.String("date", dates[dateIndex]))
-				s.Handle500(w, r)
-				return
-			}
-			f = time.Unix(num, 0).In(loc)
-		}
-		if d.Equal(f) {
-			// friday selected, so add it
-			if exists, err := s.store.DoesFridayExist(f); err != nil {
-				Log.Error("failed check friday", zap.Error(err))
-				continue
-			} else if !exists {
-				err := s.store.AddFriday(f)
-				if err != nil {
-					Log.Error("failed to add friday", zap.Error(err))
-				} else {
-					Log.Info("added friday", zap.Time("date", f))
-				}
-			}
-			dateIndex++
-		} else if f.After(d) {
-			// friday is not selected, so remove it
-			// TODO warn if users have already RSVP'ed
-			if exists, err := s.store.DoesFridayExist(d); err != nil {
-				Log.Error("failed to check friday", zap.Error(err))
-				continue
-			} else if exists {
-				err := s.store.RemoveFriday(d)
-				if err != nil {
-					Log.Error("failed to remove friday", zap.Error(err))
-				} else {
-					Log.Info("removed friday", zap.Time("date", d))
-				}
-				// NOTE the calendar event must be deleted manually
-			}
-		}
-		// else {
-		// f.Before(d) == true
-		// do nothing
-		// }
-	}
+	isActive := form["active"]
+	group := r.Form["group"]
+	details := r.Form["details"]
+	dates := r.Form["date"]
+	needsActivation := len(r.Form["activate"]) > 0
 
-	http.Redirect(w, r, "/admin", http.StatusFound)
+	Log.Info("admin edit", zap.Strings("dates", dates),
+		zap.Strings("group", group),
+		zap.Strings("details", details),
+		zap.Strings("isActive", isActive),
+		zap.Bool("needsActivation", needsActivation))
+
+	loc, _ := time.LoadLocation("America/New_York")
+	num, err := strconv.ParseInt(dates[0], 10, 64)
+	if err != nil {
+		Log.Error("failed parsing date int from rsvp form", zap.String("date", dates[0]))
+		w.Write(getToast("parse error"))
+		return
+	}
+	f := time.Unix(num, 0).In(loc)
+
+	if exists, err := s.store.DoesFridayExist(f); err != nil {
+		Log.Error("failed check friday", zap.Error(err))
+	} else if needsActivation && !exists {
+		err := s.store.AddFriday(f)
+		if err != nil {
+			Log.Error("failed to add friday", zap.Error(err))
+		} else {
+			Log.Info("added friday", zap.Time("date", f))
+			w.Write(getToast("added friday"))
+		}
+	} else if !needsActivation && exists {
+		err := s.store.RemoveFriday(f)
+		if err != nil {
+			Log.Error("failed to remove friday", zap.Error(err))
+		} else {
+			Log.Info("removed friday", zap.Time("date", f))
+			w.Write(getToast("removed friday"))
+		}
+	} else {
+		w.Write(getToast("no changes"))
+	}
 }

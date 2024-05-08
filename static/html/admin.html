@@ -1,8 +1,10 @@
+{{define "Admin"}}
 <!DOCTYPE html>
 <html>
 
 <head>
     <link rel="stylesheet" href="/static/css/index.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
@@ -11,21 +13,13 @@
 
     <p>Hi {{.Name}}</p>
 
-    <form method="get" action="/admin/submit">
+    <table id="friday-table">
         {{range .FridayTimes}}
-        {{if .Active}}
-        <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}" checked>
-        {{else}}
-        <input type="checkbox" id="{{.Date}}" name="date" value="{{.ID}}">
+        <tr>
+            {{template "AdminFridayView" .}}
+        </tr>
         {{end}}
-        <label for="{{.Date}}">{{.Date}}</label><br>
-        <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}<br></div>
-        {{end}}
-        <br>
-        <div id="submit">
-            <input type="submit" value="Update">
-        </div>
-    </form>
+    </table>
 
     <br><br>
     <a href="/">pizza</a> |
@@ -33,3 +27,4 @@
 </body>
 
 </html>
+{{end}}

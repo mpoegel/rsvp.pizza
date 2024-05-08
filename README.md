@@ -19,7 +19,7 @@ rsvp.pizza patch -init
 ```
 
 ### Setup OAuth2 Server
-Configure an OAuth2 server such as Keycloak. Create a client application to get the Client ID and Client Server.
+Configure a Keycloak OAuth2 server. Create a client application to get the Client ID and Client Server.
 
 ### Install the package
 1. Download the latest version
