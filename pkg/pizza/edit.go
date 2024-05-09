@@ -26,7 +26,7 @@ func Edit(args []string) {
 	config := LoadConfigEnv()
 	var accessor Accessor
 	var err error
-	accessor, err = NewSQLAccessor(config.DBFile)
+	accessor, err = NewSQLAccessor(config.DBFile, false)
 	if err != nil {
 		Log.Fatal("sql accessor init failure", zap.Error(err))
 	}

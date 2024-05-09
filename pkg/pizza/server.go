@@ -50,7 +50,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	var accessor Accessor
 	var err error
 	Log.Info("using the sqlite accessor")
-	accessor, err = NewSQLAccessor(config.DBFile)
+	accessor, err = NewSQLAccessor(config.DBFile, false)
 	if err != nil {
 		return nil, err
 	}

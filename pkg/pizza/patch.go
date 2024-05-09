@@ -18,7 +18,7 @@ func Patch(args []string) {
 	config := LoadConfigEnv()
 	var accessor *SQLAccessor
 	var err error
-	accessor, err = NewSQLAccessor(config.DBFile)
+	accessor, err = NewSQLAccessor(config.DBFile, true)
 	if err != nil {
 		Log.Fatal("sql accessor init failure", zap.Error(err))
 	}

@@ -14,7 +14,7 @@ func TestSqlAccessor_IsFriendAllowed(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -39,7 +39,7 @@ func TestSqlAccessor_GetFriendName(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -64,7 +64,7 @@ func TestSqlAccessor_GetUpcomingFridays(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -88,7 +88,7 @@ func TestSqlAccessor_ListFriends(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -112,7 +112,7 @@ func TestSqlAccessor_ListFridays(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -137,7 +137,7 @@ func TestSqlAccessor_RemoveFriend(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -161,7 +161,7 @@ func TestSqlAccessor_RemoveFriday(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())

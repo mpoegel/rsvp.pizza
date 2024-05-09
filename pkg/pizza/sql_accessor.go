@@ -11,12 +11,15 @@ type SQLAccessor struct {
 	db *sql.DB
 }
 
-func NewSQLAccessor(dbfile string) (*SQLAccessor, error) {
+func NewSQLAccessor(dbfile string, skipPatch bool) (*SQLAccessor, error) {
 	db, err := sql.Open("sqlite3", dbfile)
 	if err != nil {
 		return nil, err
 	}
 	a := &SQLAccessor{db}
+	if skipPatch {
+		return a, nil
+	}
 	return a, a.PatchTables()
 }
 
