@@ -18,8 +18,8 @@
         <tr>
             <td class="friday-time">
                 <label for="{{.Date}}">{{.Date}}</label><br>
-                <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}<br>
-                </div>
+                <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}</div>
+                <span class="friday-details"><i>{{.Details}}</i></span>
                 <div class="btn-rsvp">
                     <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-swap="outerHTML">RSVP</button>
                 </div>

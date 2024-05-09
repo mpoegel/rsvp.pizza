@@ -212,3 +212,12 @@ func (a *SQLAccessor) RemoveFriday(date time.Time) error {
 	_, err = stmt.Exec(date)
 	return err
 }
+
+func (a *SQLAccessor) UpdateFriday(friday Friday) error {
+	stmt, err := a.db.Prepare("UPDATE fridays SET invited_group=?, details=? WHERE start_time=?")
+	if err != nil {
+		return nil
+	}
+	_, err = stmt.Exec(friday.Group, friday.Details, friday.Date)
+	return err
+}

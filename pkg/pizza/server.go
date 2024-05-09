@@ -201,33 +201,39 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 		estZone, _ := time.LoadLocation("America/New_York")
 		data.FridayTimes = make([]IndexFridayData, 0)
-		for i, friday := range fridays {
+		for _, friday := range fridays {
 			if friday.Group != nil && !claims.InGroup(*friday.Group) {
 				// skip friday when the user is not in the invited group
 				continue
 			}
-			data.FridayTimes = append(data.FridayTimes, IndexFridayData{})
+
+			fData := IndexFridayData{}
 			t := friday.Date
 			t = t.In(estZone)
-			data.FridayTimes[i].Date = t.Format(time.RFC822)
-			data.FridayTimes[i].ID = t.Unix()
+			fData.Date = t.Format(time.RFC822)
+			fData.ID = t.Unix()
+			if friday.Details != nil {
+				fData.Details = *friday.Details
+			}
 
-			eventID := strconv.FormatInt(data.FridayTimes[i].ID, 10)
+			eventID := strconv.FormatInt(fData.ID, 10)
+			// get the calendar event to see who has already RSVP'ed
 			if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
 				Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
-				data.FridayTimes[i].Guests = make([]string, 0)
+				fData.Guests = make([]string, 0)
 			} else if err != nil {
-				data.FridayTimes[i].Guests = make([]string, 0)
+				fData.Guests = make([]string, 0)
 			} else {
-				data.FridayTimes[i].Guests = make([]string, len(event.Attendees))
+				fData.Guests = make([]string, len(event.Attendees))
 				for k, email := range event.Attendees {
 					if name, err := s.store.GetFriendName(email); err != nil {
-						data.FridayTimes[i].Guests[k] = email
+						fData.Guests[k] = email
 					} else {
-						data.FridayTimes[i].Guests[k] = name
+						fData.Guests[k] = name
 					}
 				}
 			}
+			data.FridayTimes = append(data.FridayTimes, fData)
 		}
 	}
 

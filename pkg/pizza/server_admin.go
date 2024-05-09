@@ -60,6 +60,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	allFridays := getFutureFridays()
 	setFridays, err := s.store.GetUpcomingFridays(futureFridayLimit)
+	Log.Info("loaded data", zap.Any("fridays", setFridays))
 	if err != nil {
 		Log.Error("failed to get fridays", zap.Error(err))
 		s.Handle500(w, r)
@@ -78,6 +79,12 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		}
 		if fridayIndex < len(setFridays) && friday.Equal(setFridays[fridayIndex].Date) {
 			f.Active = true
+			if setFridays[fridayIndex].Group != nil {
+				f.Group = *setFridays[fridayIndex].Group
+			}
+			if setFridays[fridayIndex].Details != nil {
+				f.Details = *setFridays[fridayIndex].Details
+			}
 			fridayIndex++
 		}
 
@@ -138,27 +145,46 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 		w.Write(getToast("parse error"))
 		return
 	}
-	f := time.Unix(num, 0).In(loc)
 
-	if exists, err := s.store.DoesFridayExist(f); err != nil {
+	friday := Friday{
+		Date:    time.Unix(num, 0).In(loc),
+		Group:   nil,
+		Details: nil,
+	}
+	if len(group) > 0 && group[0] != "" {
+		friday.Group = &group[0]
+	}
+	if len(details) > 0 && details[0] != "" {
+		friday.Details = &details[0]
+	}
+
+	if exists, err := s.store.DoesFridayExist(friday.Date); err != nil {
 		Log.Error("failed check friday", zap.Error(err))
 	} else if needsActivation && !exists {
-		err := s.store.AddFriday(f)
+		err := s.store.AddFriday(friday.Date)
 		if err != nil {
 			Log.Error("failed to add friday", zap.Error(err))
+			w.Write(getToast("failed to add friday"))
+		} else if err = s.store.UpdateFriday(friday); err != nil {
+			Log.Error("failed to update friday", zap.Error(err))
+			w.Write(getToast("failed to update friday"))
 		} else {
-			Log.Info("added friday", zap.Time("date", f))
+			Log.Info("added friday", zap.Any("friday", friday))
 			w.Write(getToast("added friday"))
 		}
 	} else if !needsActivation && exists {
-		err := s.store.RemoveFriday(f)
+		err := s.store.RemoveFriday(friday.Date)
 		if err != nil {
 			Log.Error("failed to remove friday", zap.Error(err))
 		} else {
-			Log.Info("removed friday", zap.Time("date", f))
+			Log.Info("removed friday", zap.Time("date", friday.Date))
 			w.Write(getToast("removed friday"))
 		}
+	} else if err = s.store.UpdateFriday(friday); err != nil {
+		Log.Error("failed to update friday", zap.Error(err))
+		w.Write(getToast("failed to update friday"))
 	} else {
-		w.Write(getToast("no changes"))
+		Log.Info("updated", zap.Any("friday", friday))
+		w.Write(getToast("updated friday"))
 	}
 }
