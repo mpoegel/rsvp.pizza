@@ -207,6 +207,16 @@ func (a *SQLAccessor) RemoveFriend(email string) error {
 	return err
 }
 
+func (a *SQLAccessor) GetFriday(date time.Time) (Friday, error) {
+	stmt, err := a.db.Prepare("select start_time, invited_group, details from fridays where start_time = ?")
+	if err != nil {
+		return Friday{}, err
+	}
+	var friday Friday
+	err = stmt.QueryRow(date).Scan(&friday.Date, &friday.Group, &friday.Details)
+	return friday, err
+}
+
 func (a *SQLAccessor) RemoveFriday(date time.Time) error {
 	stmt, err := a.db.Prepare("delete from fridays where start_time = ?")
 	if err != nil {

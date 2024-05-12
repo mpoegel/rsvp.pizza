@@ -120,6 +120,10 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	r.HandleFunc("/admin", s.HandleAdmin)
 	r.HandleFunc("/admin/edit", s.HandleAdminEdit)
 
+	r.HandleFunc("/api/token", s.HandleAPIAuth)
+	r.HandleFunc("/api/friday", s.HandleAPIFriday)
+	r.HandleFunc("/api/friday/{ID}", s.HandleAPIFriday)
+
 	return &s, nil
 }
 
@@ -262,53 +266,52 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(claims.Email)
 	Log.Debug("rsvp request", zap.String("email", email), zap.Strings("dates", dates))
 
-	friendName := claims.GivenName
-
-	newEvent := CalendarEvent{
-		AnyoneCanAddSelf:      false,
-		Description:           "Welcome to Pizza Friday!",
-		EndTime:               time.Now(),
-		GuestsCanInviteOthers: false,
-		GuestsCanModify:       false,
-		Id:                    "",
-		Locked:                true,
-		StartTime:             time.Now(),
-		Status:                "confirmed",
-		Summary:               "Pizza Friday",
-		Visibility:            "private",
-	}
-
-	pendingDates := make([]time.Time, len(dates))
-	for i, d := range dates {
+	for _, d := range dates {
 		num, err := strconv.ParseInt(d, 10, 64)
 		if err != nil {
 			Log.Error("failed parsing date int from rsvp form", zap.String("date", d))
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 			return
 		}
-		pendingDates[i] = time.Unix(num, 0)
-		newEvent.StartTime = pendingDates[i]
-		newEvent.EndTime = pendingDates[i].Add(time.Hour + 5)
-		newEvent.Id = d
-
-		err = s.calendar.InviteToEvent(d, email, friendName)
-		if err != nil && err == ErrEventNotFound {
-			if err = s.calendar.CreateEvent(newEvent); err != nil {
-				Log.Error("could not create event", zap.String("eventID", d), zap.String("email", email))
-				template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_error.html"))).Execute(w, nil)
-				return
-			}
-			err = s.calendar.InviteToEvent(d, email, friendName)
-		}
-		if err != nil {
-			Log.Error("invite failed", zap.String("eventID", d), zap.String("email", email))
+		if err = s.CreateAndInvite(d, time.Unix(num, 0), email, claims.GivenName); err != nil {
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_error.html"))).Execute(w, nil)
 			return
 		}
-		Log.Debug("event updated", zap.String("eventID", d), zap.String("email", email), zap.String("name", friendName))
 	}
 
 	template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_success.html"))).Execute(w, nil)
+}
+
+func (s *Server) CreateAndInvite(ID string, startTime time.Time, email, name string) error {
+	newEvent := CalendarEvent{
+		AnyoneCanAddSelf:      false,
+		Description:           "Welcome to Pizza Friday!",
+		EndTime:               startTime,
+		GuestsCanInviteOthers: false,
+		GuestsCanModify:       false,
+		Id:                    ID,
+		Locked:                true,
+		StartTime:             startTime.Add(time.Hour + 5),
+		Status:                "confirmed",
+		Summary:               "Pizza Friday",
+		Visibility:            "private",
+	}
+
+	err := s.calendar.InviteToEvent(ID, email, name)
+	if err != nil && err == ErrEventNotFound {
+		if err = s.calendar.CreateEvent(newEvent); err != nil {
+			Log.Error("could not create event", zap.String("eventID", ID), zap.String("email", email))
+			return err
+		}
+		err = s.calendar.InviteToEvent(ID, email, name)
+	}
+	if err != nil {
+		Log.Error("invite failed", zap.String("eventID", ID), zap.String("email", email))
+		return err
+	}
+
+	Log.Debug("event updated", zap.String("eventID", ID), zap.String("email", email), zap.String("name", name))
+	return nil
 }
 
 func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {

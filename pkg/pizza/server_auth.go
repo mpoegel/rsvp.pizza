@@ -2,12 +2,14 @@ package pizza
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"path"
 	"strings"
 	"text/template"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt/v5"
 	uuid "github.com/google/uuid"
 	zap "go.uber.org/zap"
 )
@@ -72,6 +74,45 @@ func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
 	}
 
 	return claims, true
+}
+
+func (s *Server) CheckAuthorization(r *http.Request) (*jwt.Token, *TokenClaims, bool) {
+	// check the authorization header for the access token
+	rawAccessToken := r.Header.Get("Authorization")
+	if rawAccessToken == "" {
+		return nil, nil, false
+	}
+
+	authParts := strings.Split(rawAccessToken, " ")
+	if len(authParts) != 2 {
+		return nil, nil, false
+	}
+
+	// decode the access token
+	token, claims, err := s.keycloak.DecodeAccessToken(r.Context(), authParts[1])
+	if err != nil {
+		return nil, nil, false
+	}
+
+	// check token expiration
+	expTime, err := token.Claims.GetExpirationTime()
+	if err != nil {
+		return nil, nil, false
+	}
+	if expTime.Before(time.Now()) {
+		return nil, nil, false
+	}
+
+	jsonClaims, err := json.Marshal(claims)
+	if err != nil {
+		return nil, nil, false
+	}
+	tokenClaims := &TokenClaims{}
+	if err = json.Unmarshal(jsonClaims, tokenClaims); err != nil {
+		return nil, nil, false
+	}
+
+	return token, tokenClaims, true
 }
 
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {

@@ -16,6 +16,7 @@ type Accessor interface {
 	ListFriends() ([]Friend, error)
 	ListFridays() ([]Friday, error)
 	RemoveFriend(email string) error
+	GetFriday(date time.Time) (Friday, error)
 	RemoveFriday(date time.Time) error
 	UpdateFriday(friday Friday) error
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	gocloak "github.com/Nerzal/gocloak/v13"
+	jwt "github.com/golang-jwt/jwt/v5"
 	zap "go.uber.org/zap"
 )
 
@@ -55,4 +56,14 @@ func NewKeycloak(config OAuth2Config) (*Keycloak, error) {
 	}
 
 	return k, nil
+}
+
+func (k *Keycloak) GetToken(ctx context.Context, opt gocloak.TokenOptions) (*gocloak.JWT, error) {
+	opt.ClientID = &k.config.ClientID
+	opt.ClientSecret = &k.config.ClientSecret
+	return k.client.GetToken(ctx, k.config.Realm, opt)
+}
+
+func (k *Keycloak) DecodeAccessToken(ctx context.Context, token string) (*jwt.Token, *jwt.MapClaims, error) {
+	return k.client.DecodeAccessToken(ctx, token, k.config.Realm)
 }
