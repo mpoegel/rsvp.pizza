@@ -84,7 +84,7 @@ func (s *Server) HandleAPIFriday(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPatch:
 		s.HandleAPIPatchFriday(token, claims, w, r)
 	default:
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
@@ -151,13 +151,25 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	w.Header().Set("Content-Type", jsonapi.MediaType)
 	w.WriteHeader(http.StatusOK)
 
-	if err = jsonapi.MarshalPayload(w, res); err != nil {
+	// if a specific friday was requested, return an object not an array as per json api spec
+	if ok {
+		err = jsonapi.MarshalPayload(w, res[0])
+	} else {
+		err = jsonapi.MarshalPayload(w, res)
+	}
+
+	if err != nil {
 		Log.Warn("api marshal payload", zap.Error(err))
 		WriteAPIError(errors.New("failed to compose response data"), http.StatusInternalServerError, w)
 	}
 }
 
 func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != jsonapi.MediaType {
+		WriteAPIError(fmt.Errorf("unsupported media type '%s'", r.Header.Get("Content-Type")), http.StatusUnsupportedMediaType, w)
+		return
+	}
+
 	friday := &api.Friday{}
 	if err := jsonapi.UnmarshalPayload(r.Body, friday); err != nil {
 		WriteAPIError(err, http.StatusBadRequest, w)
@@ -191,6 +203,21 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 			WriteAPIError(fmt.Errorf("not allowed to invite guest '%s'", g.ID), http.StatusUnauthorized, w)
 			return
 		}
+	}
+
+	if friday.StartTime.Before(time.Now()) {
+		WriteAPIError(errors.New("friday is in the past"), http.StatusNotModified, w)
+		return
+	}
+
+	if friday.StartTime.After(time.Now().AddDate(0, 1, 0)) {
+		WriteAPIError(errors.New("friday is more than one month away"), http.StatusTooEarly, w)
+		return
+	}
+
+	if friday.StartTime.Before(time.Now().Add(time.Hour * 24)) {
+		WriteAPIError(errors.New("modifications cannot be made less than 24 hours before the friday"), http.StatusNotModified, w)
+		return
 	}
 
 	// all good to update invite
