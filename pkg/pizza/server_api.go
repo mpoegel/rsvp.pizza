@@ -50,10 +50,12 @@ func (s *Server) HandleAPIAuth(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["grant_type"]) > 0 {
 		opt.GrantType = &r.Form["grant_type"][0]
 	}
+	if len(r.Form["refresh_token"]) > 0 {
+		opt.RefreshToken = &r.Form["refresh_token"][0]
+	}
 
 	jwt, err := s.keycloak.GetToken(context.Background(), opt)
 	if err != nil {
-		Log.Error("GetToken failure", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
