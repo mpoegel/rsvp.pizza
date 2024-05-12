@@ -94,8 +94,8 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	var err error
 	estZone, _ := time.LoadLocation("America/New_York")
 
-	fridayID, ok := vars["ID"]
-	if ok {
+	fridayID, directReq := vars["ID"]
+	if directReq {
 		rawTime, err := strconv.ParseInt(fridayID, 10, 64)
 		if err != nil {
 			WriteAPIError(err, http.StatusBadRequest, w)
@@ -129,6 +129,15 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 			Guests:    nil,
 		}
 
+		// not part of invited group
+		if f.Group != nil && !claims.InGroup(*f.Group) {
+			// if this friday was specifically requested, the response needs to be 404
+			if directReq {
+				WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", fridayID), http.StatusNotFound, w)
+				return
+			}
+		}
+
 		if event, err := s.calendar.GetEvent(id); err != nil && err != ErrEventNotFound {
 			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", id))
 		} else {
@@ -152,7 +161,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	w.WriteHeader(http.StatusOK)
 
 	// if a specific friday was requested, return an object not an array as per json api spec
-	if ok {
+	if directReq {
 		err = jsonapi.MarshalPayload(w, res[0])
 	} else {
 		err = jsonapi.MarshalPayload(w, res)
