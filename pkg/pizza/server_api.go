@@ -125,8 +125,11 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 		friday := &api.Friday{
 			ID:        id,
 			StartTime: f.Date,
-			Details:   *f.Details,
 			Guests:    nil,
+		}
+
+		if f.Details != nil {
+			friday.Details = *f.Details
 		}
 
 		// not part of invited group
