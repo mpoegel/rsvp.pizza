@@ -300,13 +300,13 @@ func (s *Server) CreateAndInvite(ID string, startTime time.Time, email, name str
 	err := s.calendar.InviteToEvent(ID, email, name)
 	if err != nil && err == ErrEventNotFound {
 		if err = s.calendar.CreateEvent(newEvent); err != nil {
-			Log.Error("could not create event", zap.String("eventID", ID), zap.String("email", email))
+			Log.Error("could not create event", zap.String("eventID", ID), zap.String("email", email), zap.Error(err))
 			return err
 		}
 		err = s.calendar.InviteToEvent(ID, email, name)
 	}
 	if err != nil {
-		Log.Error("invite failed", zap.String("eventID", ID), zap.String("email", email))
+		Log.Error("invite failed", zap.String("eventID", ID), zap.String("email", email), zap.Error(err))
 		return err
 	}
 
