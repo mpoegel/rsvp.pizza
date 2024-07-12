@@ -50,3 +50,10 @@ sudo systemctl reload nginx
 ```sh
 sudo systemctl start pizza.service
 ```
+
+### Docker
+
+```sh
+docker build -t rsvp.pizza .
+docker run --env-file=.env -v $PWD:/etc/pizza/db -v $PWD:/etc/pizza/creds rsvp.pizza
+```

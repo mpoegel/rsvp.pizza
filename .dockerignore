@@ -6,10 +6,9 @@
 *.dylib
 rsvp.pizza
 *.env
-!configs/.env
 credentials.json
 token.json
-configs/*test.yaml
+configs
 
 # Test binary, built with `go test -c`
 *.test
