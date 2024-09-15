@@ -23,20 +23,44 @@ a {
     width: 100px;
 }
 
-.guestLevel {
+.guest-level {
     text-align: left;
-    width: 50%;
+    width: 75%;
+    display: flex;
+    cursor: pointer;
 }
 
-.guest {
+.guest-box {
     white-space: pre;
-    min-width: 10px;
+    width: 10px;
     min-height: 3px;
     height: 10px;
     padding: 3px 3px;
     background-color: darkgreen;
     display: inline-block;
     margin: 1px;
+}
+
+.guest-name {
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.guest-level-expanded {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    animation-duration: 2s;
+    cursor: pointer;
+}
+
+.guest-expanded {
+    display: flex;
+}
+
+.guest-name-expanded {
+    padding-left: 5px;
 }
 
 .friday-time {

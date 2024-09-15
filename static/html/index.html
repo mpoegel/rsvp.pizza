@@ -18,7 +18,14 @@
         <tr>
             <td class="friday-time">
                 <label for="{{.Date}}">{{.Date}}</label><br>
-                <div class="guestLevel">{{range .Guests}}<span class="guest" title="{{.}}">&nbsp;</span>{{end}}</div>
+                <div class="guest-level" onclick="expandGuests(this);">
+                    {{range .Guests}}
+                    <div class="guest" title="{{.}}">
+                        <span class="guest-box"></span>
+                        <div class="guest-name">{{.}}</div>
+                    </div>
+                    {{end}}
+                </div>
                 <span class="friday-details"><i>{{.Details}}</i></span>
                 <div class="btn-rsvp">
                     <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-swap="outerHTML">RSVP</button>
@@ -39,5 +46,6 @@
     {{end}}
 
 </body>
+<script src="/static/js/index.js"></script>
 
 </html>
