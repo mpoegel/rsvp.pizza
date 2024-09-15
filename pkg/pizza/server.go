@@ -193,6 +193,11 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		data.IsAdmin = claims.HasRole("pizza_host")
 
 		Log.Info("welcome", zap.String("name", claims.Name))
+
+		if err = s.store.AddFriend(claims.Email, claims.Name); err != nil {
+			Log.Warn("failed to add friend", zap.Error(err))
+		}
+
 		data.Name = claims.GivenName
 		data.LogoutURL = fmt.Sprintf("%s/%s?post_logout_redirect_uri=%s/logout&client_id=%s", s.oauth2Conf.Endpoint.AuthURL, "../logout", s.config.OAuth2.RedirectURL, "pizza")
 

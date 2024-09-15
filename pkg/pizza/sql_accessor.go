@@ -116,11 +116,11 @@ func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([
 }
 
 func (a *SQLAccessor) AddFriend(email, name string) error {
-	stmt, err := a.db.Prepare("insert into friends (email, name) values (?, ?)")
+	stmt, err := a.db.Prepare("INSERT INTO friends (email, name) VALUES (?, ?) ON CONFLICT (email) DO UPDATE SET name=?")
 	if err != nil {
 		return nil
 	}
-	_, err = stmt.Exec(email, name)
+	_, err = stmt.Exec(email, name, name)
 	return err
 }
 
