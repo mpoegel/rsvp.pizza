@@ -4,7 +4,6 @@
 *.dll
 *.so
 *.dylib
-rsvp.pizza
 *.env
 credentials.json
 token.json
