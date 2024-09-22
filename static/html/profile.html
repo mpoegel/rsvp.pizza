@@ -1,0 +1,85 @@
+{{define "Profile"}}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <h2>Pizza Profile</h2>
+
+    {{if .LoggedIn}}
+    <p>Hi {{.Name}}</p>
+
+    <div id="preferences">
+        <h3>Doneness</h3>
+        {{range .Doneness}}
+        <label class="preference" for="doneness-{{.Name}}">
+            {{if .IsSelected}}
+            <input type="radio" id="doneness-{{.Name}}" name="doneness" value="{{.Name}}" checked>
+            {{else}}
+            <input type="radio" id="doneness-{{.Name}}" name="doneness" value="{{.Name}}">
+            {{end}}
+            <span>{{.Name}}</span>
+        </label>
+        {{end}}
+
+        <h3>Cheese</h3>
+        {{range .Cheese}}
+        <label class="preference" for="cheese-{{.Name}}">
+            {{if .IsSelected}}
+            <input type="checkbox" id="cheese-{{.Name}}" name="cheese" value="{{.Name}}" checked>
+            {{else}}
+            <input type="checkbox" id="cheese-{{.Name}}" name="cheese" value="{{.Name}}">
+            {{end}}
+            <span>{{.Name}}</span>
+        </label>
+        {{end}}
+
+        <h3>Sauce</h3>
+        {{range .Sauce}}
+        <label class="preference" for="sauce-{{.Name}}">
+            {{if .IsSelected}}
+            <input type="checkbox" id="sauce-{{.Name}}" name="sauce" value="{{.Name}}" checked>
+            {{else}}
+            <input type="checkbox" id="sauce-{{.Name}}" name="sauce" value="{{.Name}}">
+            {{end}}
+            <span>{{.Name}}</span>
+        </label>
+        {{end}}
+
+        <h3>Toppings</h3>
+        {{range .Toppings}}
+        <label class="preference" for="toppings-{{.Name}}">
+            {{if .IsSelected}}
+            <input type="checkbox" id="toppings-{{.Name}}" name="toppings" value="{{.Name}}" checked>
+            {{else}}
+            <input type="checkbox" id="toppings-{{.Name}}" name="toppings" value="{{.Name}}">
+            {{end}}
+            <span>{{.Name}}</span>
+        </label>
+        {{end}}
+    </div>
+
+    <br><br>
+
+    <div class="btn-update">
+        <span class="toast"></span>
+        <button class="btn" hx-post="/profile/edit" hx-swap="outerHTML settle:3s" hx-target="previous .toast"
+            hx-include="#preferences">Update</button>
+    </div>
+
+    <br><br><br>
+    <a href="/">pizza</a> |
+    <a href="/logout">logout</a>
+
+    {{else}}
+    <a href="/login">login</a>
+    {{end}}
+</body>
+
+</html>
+{{end}}

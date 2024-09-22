@@ -1,12 +1,4 @@
-// let guestLevels = document.getElementsByClassName("guest-level");
-// for (let i = 0; i < guestLevels.length; i++) {
-//     guestLevels[i].addEventListener("mouseDown", function (e) {
-//         console.log(e);
-//     });
-// }
-
 function expandGuests(event) {
-    // console.log(event);
     if (event.className === "guest-level") {
         // expand
         event.className = "guest-level-expanded";

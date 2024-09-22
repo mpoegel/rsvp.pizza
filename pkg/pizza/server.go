@@ -120,6 +120,9 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	r.HandleFunc("/admin", s.HandleAdmin)
 	r.HandleFunc("/admin/edit", s.HandleAdminEdit)
 
+	r.HandleFunc("/profile", s.HandleGetProfile)
+	r.HandleFunc("/profile/edit", s.HandleUpdateProfile)
+
 	r.HandleFunc("/api/token", s.HandleAPIAuth)
 	r.HandleFunc("/api/friday", s.HandleAPIFriday)
 	r.HandleFunc("/api/friday/{ID}", s.HandleAPIFriday)

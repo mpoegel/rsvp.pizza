@@ -81,6 +81,15 @@ a {
     justify-content: flex-end;
 }
 
+.btn-update {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-update .btn {
+    color: black;
+}
+
 .toast.htmx-settling {
     opacity: 100;
 }
@@ -91,6 +100,30 @@ a {
     padding: 2px;
     flex-grow: 2;
     color: brown;
+}
+
+.preference {
+    position: relative;
+    cursor: pointer;
+    margin: 5px;
+    user-select: none;
+}
+
+.preference [type="checkbox"],
+.preference [type="radio"] {
+    display: none;
+}
+
+.preference [type="checkbox"]+span,
+.preference [type="radio"]+span {
+    display: inline-block;
+    padding: 5px;
+    border: 3px solid white;
+    margin-bottom: 3px;
+}
+
+.preference :checked+span {
+    background: darkgreen;
 }
 
 @media (max-width: 600px) {
@@ -109,7 +142,14 @@ a {
         font-size: 1.1em;
     }
 
-    .btn-rsvp {
+    .btn-update .btn {
+        margin-top: 50px;
+        width: 100px;
+        font-size: 1.1em;
+    }
+
+    .btn-rsvp,
+    .btn-update {
         display: flex;
         justify-content: center;
     }

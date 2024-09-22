@@ -2,6 +2,7 @@ package pizza
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -118,7 +119,7 @@ func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([
 func (a *SQLAccessor) AddFriend(email, name string) error {
 	stmt, err := a.db.Prepare("INSERT INTO friends (email, name) VALUES (?, ?) ON CONFLICT (email) DO UPDATE SET name=?")
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = stmt.Exec(email, name, name)
 	return err
@@ -201,7 +202,7 @@ func (a *SQLAccessor) ListFridays() ([]Friday, error) {
 func (a *SQLAccessor) RemoveFriend(email string) error {
 	stmt, err := a.db.Prepare("delete from friends where email = ?")
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = stmt.Exec(email)
 	return err
@@ -220,7 +221,7 @@ func (a *SQLAccessor) GetFriday(date time.Time) (Friday, error) {
 func (a *SQLAccessor) RemoveFriday(date time.Time) error {
 	stmt, err := a.db.Prepare("delete from fridays where start_time = ?")
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = stmt.Exec(date)
 	return err
@@ -229,8 +230,36 @@ func (a *SQLAccessor) RemoveFriday(date time.Time) error {
 func (a *SQLAccessor) UpdateFriday(friday Friday) error {
 	stmt, err := a.db.Prepare("UPDATE fridays SET invited_group=?, details=? WHERE start_time=?")
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = stmt.Exec(friday.Group, friday.Details, friday.Date)
+	return err
+}
+
+func (a *SQLAccessor) GetPreferences(email string) (Preferences, error) {
+	var prefs Preferences
+	stmt, err := a.db.Prepare("SELECT preferences FROM friends WHERE email=?")
+	if err != nil {
+		return prefs, err
+	}
+	var rawPreferences string
+	err = stmt.QueryRow(email).Scan(&rawPreferences)
+	if err != nil {
+		return prefs, err
+	}
+	err = json.Unmarshal([]byte(rawPreferences), &prefs)
+	return prefs, err
+}
+
+func (a *SQLAccessor) SetPreferences(email string, prefs Preferences) error {
+	rawPrefs, err := json.Marshal(prefs)
+	if err != nil {
+		return err
+	}
+	stmt, err := a.db.Prepare("UPDATE friends SET preferences=? WHERE email=?")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(rawPrefs, email)
 	return err
 }

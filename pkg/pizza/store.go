@@ -2,6 +2,8 @@ package pizza
 
 import (
 	"time"
+
+	"github.com/mpoegel/rsvp.pizza/pkg/types"
 )
 
 type Accessor interface {
@@ -22,6 +24,9 @@ type Accessor interface {
 	GetFriday(date time.Time) (Friday, error)
 	RemoveFriday(date time.Time) error
 	UpdateFriday(friday Friday) error
+
+	GetPreferences(email string) (Preferences, error)
+	SetPreferences(email string, preferences Preferences) error
 }
 
 type Friend struct {
@@ -33,4 +38,11 @@ type Friday struct {
 	Date    time.Time
 	Group   *string
 	Details *string
+}
+
+type Preferences struct {
+	Toppings []types.Topping
+	Cheese   []types.Cheese
+	Sauce    []types.Sauce
+	Doneness types.Doneness
 }

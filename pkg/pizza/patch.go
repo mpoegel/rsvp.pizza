@@ -67,3 +67,9 @@ func Patch003(a *SQLAccessor) error {
 	_, err := a.db.Exec(stmt)
 	return err
 }
+
+func Patch004(a *SQLAccessor) error {
+	stmt := `ALTER TABLE friends ADD COLUMN preferences text default "{}";`
+	_, err := a.db.Exec(stmt)
+	return err
+}
