@@ -6,6 +6,8 @@ const (
 	Raw_Tomatoes Sauce = iota + 1
 	Cooked_Tomatoes
 	Basil_Pesto
+	Vodka
+	Alfredo
 )
 
 func ParseSauces(sauces []string) []Sauce {
@@ -24,6 +26,10 @@ func ParseSauce(sauce string) Sauce {
 		return Cooked_Tomatoes
 	case "Basil Pesto":
 		return Basil_Pesto
+	case "Vodka":
+		return Vodka
+	case "Alfredo":
+		return Alfredo
 	default:
 		return 0
 	}
@@ -37,6 +43,10 @@ func (s Sauce) String() string {
 		return "Cooked Tomatoes"
 	case Basil_Pesto:
 		return "Basil Pesto"
+	case Vodka:
+		return "Vodka"
+	case Alfredo:
+		return "Alfredo"
 	default:
 		return ""
 	}

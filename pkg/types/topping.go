@@ -11,6 +11,11 @@ const (
 	Pepperoni
 	Prosciutto
 	Soppressata
+	Sausage
+	Ham
+	Pineapple
+	Green_Pepper
+	Mushroom
 )
 
 func ParseToppings(toppings []string) []Topping {
@@ -39,6 +44,16 @@ func ParseTopping(topping string) Topping {
 		return Prosciutto
 	case "Soppressata":
 		return Soppressata
+	case "Sausage":
+		return Sausage
+	case "Ham":
+		return Ham
+	case "Pineapple":
+		return Pineapple
+	case "Green Pepper":
+		return Green_Pepper
+	case "Mushroom":
+		return Mushroom
 	default:
 		return 0
 	}
@@ -62,6 +77,16 @@ func (t Topping) String() string {
 		return "Prosciutto"
 	case Soppressata:
 		return "Soppressata"
+	case Sausage:
+		return "Sausage"
+	case Ham:
+		return "Ham"
+	case Pineapple:
+		return "Pineapple"
+	case Green_Pepper:
+		return "Green Pepper"
+	case Mushroom:
+		return "Mushroom"
 	default:
 		return ""
 	}

@@ -7,6 +7,7 @@ const (
 	Whole_Mozzarella
 	Cheddar
 	Ricotta
+	Parmesan
 )
 
 func ParseCheeses(cheeses []string) []Cheese {
@@ -27,6 +28,8 @@ func ParseCheese(cheese string) Cheese {
 		return Cheddar
 	case "Ricotta":
 		return Ricotta
+	case "Parmesan":
+		return Parmesan
 	default:
 		return 0
 	}
@@ -42,6 +45,8 @@ func (c Cheese) String() string {
 		return "Cheddar"
 	case Ricotta:
 		return "Ricotta"
+	case Parmesan:
+		return "Parmesan"
 	default:
 		return ""
 	}
