@@ -41,6 +41,7 @@ type Friday struct {
 	Details   *string
 	Guests    []string
 	MaxGuests int
+	Enabled   bool
 }
 
 type Preferences struct {

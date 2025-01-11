@@ -132,8 +132,8 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 			friday.Details = *f.Details
 		}
 
-		// not part of invited group
-		if f.Group != nil && !claims.InGroup(*f.Group) {
+		// not part of invited group OR friday is disabled
+		if (f.Group != nil && !claims.InGroup(*f.Group)) || !f.Enabled {
 			// if this friday was specifically requested, the response needs to be 404
 			if directReq {
 				WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", fridayID), http.StatusNotFound, w)
@@ -203,8 +203,8 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	friday.Details = *f.Details
 	friday.StartTime = f.Date
 
-	// not part of invited group
-	if f.Group != nil && !claims.InGroup(*f.Group) {
+	// not part of invited group OR friday not enabled
+	if (f.Group != nil && !claims.InGroup(*f.Group)) || !f.Enabled {
 		WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", friday.ID), http.StatusNotFound, w)
 		return
 	}
@@ -235,7 +235,7 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	// all good to update invite
 	Log.Info("rsvp request", zap.String("email", claims.Email))
 
-	if err = s.CreateAndInvite(friday.ID, friday.StartTime, claims.Email, claims.Name); err != nil {
+	if err = s.CreateAndInvite(friday.ID, f, claims.Email, claims.Name); err != nil {
 		WriteAPIError(errors.New("calendar failure"), http.StatusInternalServerError, w)
 		return
 	}

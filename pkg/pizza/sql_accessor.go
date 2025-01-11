@@ -96,7 +96,8 @@ func (a *SQLAccessor) GetUpcomingFridays(daysAhead int) ([]Friday, error) {
 
 func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]Friday, error) {
 	before := after.AddDate(0, 0, daysAhead)
-	stmt, err := a.db.Prepare("select start_time, invited_group, details, invited, max_guests from fridays where start_time <= ? and start_time >= ?")
+	stmt, err := a.db.Prepare(`SELECT start_time, invited_group, details, invited, max_guests, enabled FROM fridays 
+		WHERE start_time <= ? AND start_time >= ?`)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([
 	for rows.Next() {
 		var friday Friday
 		var rawInvited string
-		err = rows.Scan(&friday.Date, &friday.Group, &friday.Details, &rawInvited, &friday.MaxGuests)
+		err = rows.Scan(&friday.Date, &friday.Group, &friday.Details, &rawInvited, &friday.MaxGuests, &friday.Enabled)
 		if err != nil {
 			return nil, err
 		}
@@ -215,13 +216,13 @@ func (a *SQLAccessor) RemoveFriend(email string) error {
 }
 
 func (a *SQLAccessor) GetFriday(date time.Time) (Friday, error) {
-	stmt, err := a.db.Prepare("select start_time, invited_group, details, invited, max_guests from fridays where start_time = ?")
+	stmt, err := a.db.Prepare("select start_time, invited_group, details, invited, max_guests, enabled from fridays where start_time = ?")
 	if err != nil {
 		return Friday{}, err
 	}
 	var friday Friday
 	var rawInvited string
-	err = stmt.QueryRow(date).Scan(&friday.Date, &friday.Group, &rawInvited, &friday.Guests, &friday.MaxGuests)
+	err = stmt.QueryRow(date).Scan(&friday.Date, &friday.Group, &friday.Details, &rawInvited, &friday.MaxGuests, &friday.Enabled)
 	if err != nil {
 		return friday, err
 	}
@@ -239,11 +240,11 @@ func (a *SQLAccessor) RemoveFriday(date time.Time) error {
 }
 
 func (a *SQLAccessor) UpdateFriday(friday Friday) error {
-	stmt, err := a.db.Prepare("UPDATE fridays SET invited_group=?, details=?, max_guests=? WHERE start_time=?")
+	stmt, err := a.db.Prepare("UPDATE fridays SET invited_group=?, details=?, max_guests=?, enabled=? WHERE start_time=?")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(friday.Group, friday.Details, friday.MaxGuests, friday.Date)
+	_, err = stmt.Exec(friday.Group, friday.Details, friday.MaxGuests, friday.Enabled, friday.Date)
 	return err
 }
 

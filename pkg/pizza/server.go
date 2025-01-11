@@ -216,8 +216,9 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		estZone, _ := time.LoadLocation("America/New_York")
 		data.FridayTimes = make([]IndexFridayData, 0)
 		for _, friday := range fridays {
-			if friday.Group != nil && !claims.InGroup(*friday.Group) {
+			if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
 				// skip friday when the user is not in the invited group
+				// also skip fridays that are disabled
 				continue
 			}
 
@@ -293,7 +294,23 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 			return
 		}
-		if err = s.CreateAndInvite(d, time.Unix(num, 0), email, claims.GivenName); err != nil {
+		estZone, _ := time.LoadLocation("America/New_York")
+		friday, err := s.store.GetFriday(time.Unix(num, 0).In(estZone))
+		if err != nil {
+			// friday does not exist
+			Log.Info("friday does not exist", zap.Error(err))
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+			return
+		}
+
+		if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
+			// not part of invited group OR friday not enabled
+			Log.Info("friday not enabled or claims check")
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+			return
+		}
+
+		if err = s.CreateAndInvite(d, friday, email, claims.GivenName); err != nil {
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_error.html"))).Execute(w, nil)
 			return
 		}
@@ -302,26 +319,22 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 	template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_success.html"))).Execute(w, nil)
 }
 
-func (s *Server) CreateAndInvite(ID string, startTime time.Time, email, name string) error {
+func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) error {
 	newEvent := CalendarEvent{
 		AnyoneCanAddSelf:      false,
 		Description:           "Welcome to Pizza Friday!",
-		StartTime:             startTime,
+		StartTime:             friday.Date,
 		GuestsCanInviteOthers: false,
 		GuestsCanModify:       false,
 		Id:                    ID,
 		Locked:                true,
-		EndTime:               startTime.Add(time.Hour + 5),
+		EndTime:               friday.Date.Add(time.Hour + 5),
 		Status:                "confirmed",
 		Summary:               "Pizza Friday",
 		Visibility:            "private",
 	}
 
 	// update local table with new guest list
-	estZone, _ := time.LoadLocation("America/New_York")
-	friday := Friday{
-		Date: startTime.In(estZone),
-	}
 	if err := s.store.AddFriendToFriday(email, friday); err != nil {
 		Log.Error("update to local invite list failed", zap.Error(err))
 		return err

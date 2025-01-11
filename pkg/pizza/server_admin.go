@@ -87,6 +87,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 				f.Details = *setFridays[fridayIndex].Details
 			}
 			f.MaxGuests = setFridays[fridayIndex].MaxGuests
+			f.Active = setFridays[fridayIndex].Enabled
 			fridayIndex++
 		}
 
@@ -161,6 +162,7 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 		Group:     nil,
 		Details:   nil,
 		MaxGuests: int(maxGuests),
+		Enabled:   needsActivation,
 	}
 	if len(group) > 0 && group[0] != "" {
 		friday.Group = &group[0]
@@ -184,13 +186,11 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 			w.Write(getToast("added friday"))
 		}
 	} else if !needsActivation && exists {
-		// TODO make this a soft delete
-		err := s.store.RemoveFriday(friday.Date)
-		if err != nil {
-			Log.Error("failed to remove friday", zap.Error(err))
+		if err := s.store.UpdateFriday(friday); err != nil {
+			Log.Error("failed to disable friday", zap.Error(err))
 		} else {
-			Log.Info("removed friday", zap.Time("date", friday.Date))
-			w.Write(getToast("removed friday"))
+			Log.Info("disabled friday", zap.Time("date", friday.Date))
+			w.Write(getToast("disabled friday"))
 		}
 	} else if err = s.store.UpdateFriday(friday); err != nil {
 		Log.Error("failed to update friday", zap.Error(err))

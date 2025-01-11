@@ -34,7 +34,8 @@
                     <span>Event is full.</span>
                     {{else}}
                     <span class="num-of-guests">{{len .Guests}} of {{ .MaxGuests }}</span>
-                    <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-swap="outerHTML">RSVP</button>
+                    <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
+                        hx-swap="innerHTML">RSVP</button>
                     {{end}}
                 </div>
             </td>

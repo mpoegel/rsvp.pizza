@@ -32,6 +32,12 @@ func Patch(args []string) {
 		err = Patch001(accessor)
 	case 2:
 		err = Patch002(accessor)
+	case 3:
+		err = Patch003(accessor)
+	case 4:
+		err = Patch004(accessor)
+	case 5:
+		err = Patch005(accessor)
 	}
 
 	if err != nil {
@@ -76,7 +82,8 @@ func Patch004(a *SQLAccessor) error {
 
 func Patch005(a *SQLAccessor) error {
 	stmt := `ALTER TABLE fridays ADD COLUMN invited text default "[]";
-			ALTER TABLE fridays ADD COLUMN max_guests int default 10;`
+			ALTER TABLE fridays ADD COLUMN max_guests int default 10;
+			ALTER TABLE fridays ADD COLUMN enabled bool default true;`
 	_, err := a.db.Exec(stmt)
 	return err
 }
