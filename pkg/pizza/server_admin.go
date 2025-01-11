@@ -70,12 +70,13 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 	data.FridayTimes = make([]IndexFridayData, 0)
 	for _, friday := range allFridays {
 		f := IndexFridayData{
-			Date:    friday.Format(time.RFC822),
-			ID:      friday.Unix(),
-			Guests:  nil,
-			Active:  false,
-			Group:   "",
-			Details: "",
+			Date:      friday.Format(time.RFC822),
+			ID:        friday.Unix(),
+			Guests:    nil,
+			Active:    false,
+			Group:     "",
+			Details:   "",
+			MaxGuests: 10,
 		}
 		if fridayIndex < len(setFridays) && friday.Equal(setFridays[fridayIndex].Date) {
 			f.Active = true
@@ -85,6 +86,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 			if setFridays[fridayIndex].Details != nil {
 				f.Details = *setFridays[fridayIndex].Details
 			}
+			f.MaxGuests = setFridays[fridayIndex].MaxGuests
 			fridayIndex++
 		}
 
@@ -129,12 +131,14 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 	isActive := form["active"]
 	group := r.Form["group"]
 	details := r.Form["details"]
+	maxGuestsStr := r.Form["maxGuests"]
 	dates := r.Form["date"]
 	needsActivation := len(r.Form["activate"]) > 0
 
 	Log.Info("admin edit", zap.Strings("dates", dates),
 		zap.Strings("group", group),
 		zap.Strings("details", details),
+		zap.Strings("maxGuests", maxGuestsStr),
 		zap.Strings("isActive", isActive),
 		zap.Bool("needsActivation", needsActivation))
 
@@ -146,10 +150,17 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	maxGuests, err := strconv.ParseInt(maxGuestsStr[0], 10, 64)
+	if err != nil {
+		w.Write(getToast("max guests must be an integer"))
+		return
+	}
+
 	friday := Friday{
-		Date:    time.Unix(num, 0).In(loc),
-		Group:   nil,
-		Details: nil,
+		Date:      time.Unix(num, 0).In(loc),
+		Group:     nil,
+		Details:   nil,
+		MaxGuests: int(maxGuests),
 	}
 	if len(group) > 0 && group[0] != "" {
 		friday.Group = &group[0]
@@ -173,6 +184,7 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 			w.Write(getToast("added friday"))
 		}
 	} else if !needsActivation && exists {
+		// TODO make this a soft delete
 		err := s.store.RemoveFriday(friday.Date)
 		if err != nil {
 			Log.Error("failed to remove friday", zap.Error(err))
