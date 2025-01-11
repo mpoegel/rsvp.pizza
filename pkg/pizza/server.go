@@ -161,12 +161,14 @@ func (s *Server) WatchCalendar(period time.Duration) {
 }
 
 type IndexFridayData struct {
-	Date    string
-	ID      int64
-	Guests  []string
-	Active  bool
-	Group   string
-	Details string
+	Date      string
+	ID        int64
+	Guests    []string
+	Active    bool
+	Group     string
+	Details   string
+	IsInvited bool
+	MaxGuests int
 }
 
 type PageData struct {
@@ -219,7 +221,9 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			fData := IndexFridayData{}
+			fData := IndexFridayData{
+				MaxGuests: friday.MaxGuests,
+			}
 			t := friday.Date
 			t = t.In(estZone)
 			fData.Date = t.Format(time.RFC822)
@@ -227,9 +231,17 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			if friday.Details != nil {
 				fData.Details = *friday.Details
 			}
+			// add indicator if guest has already RSVP'ed for this friday
+			fData.IsInvited = false
+			for _, guest := range friday.Guests {
+				if guest == claims.Email {
+					fData.IsInvited = true
+				}
+			}
 
 			eventID := strconv.FormatInt(fData.ID, 10)
 			// get the calendar event to see who has already RSVP'ed
+			// TODO switch to using the local guest list instead of the calendar
 			if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
 				Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
 				fData.Guests = make([]string, 0)
@@ -303,6 +315,16 @@ func (s *Server) CreateAndInvite(ID string, startTime time.Time, email, name str
 		Status:                "confirmed",
 		Summary:               "Pizza Friday",
 		Visibility:            "private",
+	}
+
+	// update local table with new guest list
+	estZone, _ := time.LoadLocation("America/New_York")
+	friday := Friday{
+		Date: startTime.In(estZone),
+	}
+	if err := s.store.AddFriendToFriday(email, friday); err != nil {
+		Log.Error("update to local invite list failed", zap.Error(err))
+		return err
 	}
 
 	err := s.calendar.InviteToEvent(ID, email, name)

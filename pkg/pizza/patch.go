@@ -73,3 +73,10 @@ func Patch004(a *SQLAccessor) error {
 	_, err := a.db.Exec(stmt)
 	return err
 }
+
+func Patch005(a *SQLAccessor) error {
+	stmt := `ALTER TABLE fridays ADD COLUMN invited text default "[]";
+			ALTER TABLE fridays ADD COLUMN max_guests int default 10;`
+	_, err := a.db.Exec(stmt)
+	return err
+}

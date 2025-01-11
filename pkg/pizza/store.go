@@ -24,6 +24,7 @@ type Accessor interface {
 	GetFriday(date time.Time) (Friday, error)
 	RemoveFriday(date time.Time) error
 	UpdateFriday(friday Friday) error
+	AddFriendToFriday(email string, friday Friday) error
 
 	GetPreferences(email string) (Preferences, error)
 	SetPreferences(email string, preferences Preferences) error
@@ -35,9 +36,11 @@ type Friend struct {
 }
 
 type Friday struct {
-	Date    time.Time
-	Group   *string
-	Details *string
+	Date      time.Time
+	Group     *string
+	Details   *string
+	Guests    []string
+	MaxGuests int
 }
 
 type Preferences struct {

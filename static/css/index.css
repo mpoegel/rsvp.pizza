@@ -81,6 +81,10 @@ a {
     justify-content: flex-end;
 }
 
+.num-of-guests {
+    padding: 0 10px;
+}
+
 .btn-update {
     display: flex;
     justify-content: flex-end;

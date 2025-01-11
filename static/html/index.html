@@ -28,7 +28,14 @@
                 </div>
                 <span class="friday-details"><i>{{.Details}}</i></span>
                 <div class="btn-rsvp">
+                    {{if .IsInvited}}
+                    <span>You're invited!</span>
+                    {{else if ge (len .Guests) .MaxGuests}}
+                    <span>Event is full.</span>
+                    {{else}}
+                    <span class="num-of-guests">{{len .Guests}} of {{ .MaxGuests }}</span>
                     <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-swap="outerHTML">RSVP</button>
+                    {{end}}
                 </div>
             </td>
         </tr>

@@ -25,6 +25,7 @@ func init() {
 		Patch002,
 		Patch003,
 		Patch004,
+		Patch005,
 	}
 }
 

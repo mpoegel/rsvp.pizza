@@ -66,6 +66,7 @@ func (a *SQLAccessor) PatchTables() error {
 	return err
 }
 
+// TODO delete
 func (a *SQLAccessor) IsFriendAllowed(email string) (bool, error) {
 	stmt, err := a.db.Prepare("select count(email) from friends where email = ?")
 	if err != nil {
@@ -95,7 +96,7 @@ func (a *SQLAccessor) GetUpcomingFridays(daysAhead int) ([]Friday, error) {
 
 func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]Friday, error) {
 	before := after.AddDate(0, 0, daysAhead)
-	stmt, err := a.db.Prepare("select start_time, invited_group, details from fridays where start_time <= ? and start_time >= ?")
+	stmt, err := a.db.Prepare("select start_time, invited_group, details, invited, max_guests from fridays where start_time <= ? and start_time >= ?")
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +108,12 @@ func (a *SQLAccessor) GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([
 	result := make([]Friday, 0)
 	for rows.Next() {
 		var friday Friday
-		err = rows.Scan(&friday.Date, &friday.Group, &friday.Details)
+		var rawInvited string
+		err = rows.Scan(&friday.Date, &friday.Group, &friday.Details, &rawInvited, &friday.MaxGuests)
 		if err != nil {
+			return nil, err
+		}
+		if err = json.Unmarshal([]byte(rawInvited), &friday.Guests); err != nil {
 			return nil, err
 		}
 		result = append(result, friday)
@@ -199,6 +204,7 @@ func (a *SQLAccessor) ListFridays() ([]Friday, error) {
 	return res, nil
 }
 
+// TODO delete
 func (a *SQLAccessor) RemoveFriend(email string) error {
 	stmt, err := a.db.Prepare("delete from friends where email = ?")
 	if err != nil {
@@ -209,12 +215,17 @@ func (a *SQLAccessor) RemoveFriend(email string) error {
 }
 
 func (a *SQLAccessor) GetFriday(date time.Time) (Friday, error) {
-	stmt, err := a.db.Prepare("select start_time, invited_group, details from fridays where start_time = ?")
+	stmt, err := a.db.Prepare("select start_time, invited_group, details, invited, max_guests from fridays where start_time = ?")
 	if err != nil {
 		return Friday{}, err
 	}
 	var friday Friday
-	err = stmt.QueryRow(date).Scan(&friday.Date, &friday.Group, &friday.Details)
+	var rawInvited string
+	err = stmt.QueryRow(date).Scan(&friday.Date, &friday.Group, &rawInvited, &friday.Guests, &friday.MaxGuests)
+	if err != nil {
+		return friday, err
+	}
+	err = json.Unmarshal([]byte(rawInvited), &friday.Guests)
 	return friday, err
 }
 
@@ -233,6 +244,36 @@ func (a *SQLAccessor) UpdateFriday(friday Friday) error {
 		return err
 	}
 	_, err = stmt.Exec(friday.Group, friday.Details, friday.Date)
+	return err
+}
+
+func (a *SQLAccessor) AddFriendToFriday(email string, friday Friday) error {
+	var invited []string
+	stmt, err := a.db.Prepare("SELECT invited FROM fridays WHERE start_time = ?")
+	if err != nil {
+		return err
+	}
+	var rawInvited string
+	err = stmt.QueryRow(friday.Date).Scan(&rawInvited)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal([]byte(rawInvited), &invited); err != nil {
+		return err
+	}
+	// ensure uniqueness
+	for _, guest := range invited {
+		if guest == email {
+			// already invited
+			return nil
+		}
+	}
+	// not invited yet
+	stmt, err = a.db.Prepare("UPDATE fridays SET invited = json_insert(invited, '$[#]', ?) WHERE start_time = ?")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(email, friday.Date)
 	return err
 }
 
