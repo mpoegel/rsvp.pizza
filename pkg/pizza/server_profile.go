@@ -70,17 +70,25 @@ func (s *Server) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
 		{Name: types.Pepperoni.String(), IsSelected: toppings[types.Pepperoni]},
 		{Name: types.Prosciutto.String(), IsSelected: toppings[types.Prosciutto]},
 		{Name: types.Soppressata.String(), IsSelected: toppings[types.Soppressata]},
+		{Name: types.Sausage.String(), IsSelected: toppings[types.Sausage]},
+		{Name: types.Ham.String(), IsSelected: toppings[types.Ham]},
+		{Name: types.Pineapple.String(), IsSelected: toppings[types.Pineapple]},
+		{Name: types.Green_Pepper.String(), IsSelected: toppings[types.Green_Pepper]},
+		{Name: types.Mushroom.String(), IsSelected: toppings[types.Mushroom]},
 	}
 	data.Cheese = []Preference{
 		{Name: types.Shredded_Mozzarella.String(), IsSelected: cheeses[types.Shredded_Mozzarella]},
 		{Name: types.Whole_Mozzarella.String(), IsSelected: cheeses[types.Whole_Mozzarella]},
 		{Name: types.Cheddar.String(), IsSelected: cheeses[types.Cheddar]},
 		{Name: types.Ricotta.String(), IsSelected: cheeses[types.Ricotta]},
+		{Name: types.Parmesan.String(), IsSelected: cheeses[types.Parmesan]},
 	}
 	data.Sauce = []Preference{
 		{Name: types.Raw_Tomatoes.String(), IsSelected: sauces[types.Raw_Tomatoes]},
 		{Name: types.Cooked_Tomatoes.String(), IsSelected: sauces[types.Cooked_Tomatoes]},
 		{Name: types.Basil_Pesto.String(), IsSelected: sauces[types.Basil_Pesto]},
+		{Name: types.Vodka.String(), IsSelected: sauces[types.Vodka]},
+		{Name: types.Alfredo.String(), IsSelected: sauces[types.Alfredo]},
 	}
 	data.Doneness = []Preference{
 		{Name: types.Well_Done.String(), IsSelected: doneness == types.Well_Done},
