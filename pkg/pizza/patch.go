@@ -2,8 +2,8 @@ package pizza
 
 import (
 	"flag"
-
-	"go.uber.org/zap"
+	"log/slog"
+	"os"
 )
 
 var AllPatches []func(*SQLAccessor) error
@@ -20,7 +20,8 @@ func Patch(args []string) {
 	var err error
 	accessor, err = NewSQLAccessor(config.DBFile, true)
 	if err != nil {
-		Log.Fatal("sql accessor init failure", zap.Error(err))
+		slog.Error("sql accessor init failure", "error", err)
+		os.Exit(1)
 	}
 
 	if *isInit {
@@ -41,7 +42,7 @@ func Patch(args []string) {
 	}
 
 	if err != nil {
-		Log.Error("patch failed", zap.Int("n", *n), zap.Error(err))
+		slog.Error("patch failed", "n", *n, "error", err)
 	}
 }
 

@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"time"
 
-	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
@@ -102,13 +102,13 @@ func (c *GoogleCalendar) googleEventToEvent(event *calendar.Event) CalendarEvent
 	if len(event.Start.DateTime) > 0 {
 		startTime, err = time.Parse(time.RFC3339, event.Start.DateTime)
 		if err != nil {
-			Log.Error("could not parse event start time", zap.String("eventID", event.Id), zap.String("time", event.Start.DateTime))
+			slog.Error("could not parse event start time", "eventID", event.Id, "time", event.Start.DateTime)
 		}
 	}
 	if len(event.End.DateTime) > 0 {
 		endTime, err = time.Parse(time.RFC3339, event.End.DateTime)
 		if err != nil {
-			Log.Error("could not parse event end time", zap.String("eventID", event.Id), zap.String("time", event.End.DateTime))
+			slog.Error("could not parse event end time", "eventID", event.Id, "time", event.End.DateTime)
 		}
 	}
 	attendees := make([]string, len(event.Attendees))
@@ -152,7 +152,7 @@ func (c *GoogleCalendar) InviteToEvent(eventID, email, name string) error {
 
 	for _, attendee := range event.Attendees {
 		if attendee.Email == email {
-			Log.Info("already invited", zap.String("email", email), zap.String("eventID", eventID))
+			slog.Info("already invited", "email", email, "eventID", eventID)
 			return nil
 		}
 	}

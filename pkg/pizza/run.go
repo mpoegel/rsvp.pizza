@@ -2,10 +2,9 @@ package pizza
 
 import (
 	"flag"
+	"log/slog"
 	"os"
 	"os/signal"
-
-	"go.uber.org/zap"
 )
 
 func Run(args []string) {
@@ -16,14 +15,15 @@ func Run(args []string) {
 	metricsReg := NewPrometheusRegistry()
 	server, err := NewServer(config, metricsReg)
 	if err != nil {
-		Log.Fatal("could not create server", zap.Error(err))
+		slog.Error("could not create server", "error", err)
+		os.Exit(1)
 	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		<-c
-		Log.Info("shutting down")
+		slog.Info("shutting down")
 		server.Stop()
 	}()
 

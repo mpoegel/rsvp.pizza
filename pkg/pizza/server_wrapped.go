@@ -2,14 +2,13 @@ package pizza
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"path"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
-
-	zap "go.uber.org/zap"
 )
 
 type WrappedPageData struct {
@@ -23,7 +22,7 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 	s.wrappedGetMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/wrapped.html"))
 	if err != nil {
-		Log.Error("template wrapped failure", zap.Error(err))
+		slog.Error("template wrapped failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -42,7 +41,7 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 	if len(email) > 0 {
 		allowed, err := s.store.IsFriendAllowed(email)
 		if err != nil {
-			Log.Error("is friend allowed check failed", zap.Error(err))
+			slog.Error("is friend allowed check failed", "error", err)
 			s.Handle500(w, r)
 			return
 		}
@@ -67,7 +66,7 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Name, err = s.store.GetFriendName(email)
 		if err != nil {
-			Log.Error("could not get friend name", zap.Error(err))
+			slog.Error("could not get friend name", "error", err)
 			return
 		}
 		// only use the first name
@@ -75,7 +74,7 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 		data.Name = nameParts[0]
 	}
 	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -114,7 +113,7 @@ func (s *Server) GetWrapped(year int) (WrappedData, error) {
 		}
 		data.TotalFridays++
 	}
-	Log.Info("wrapped cache update", zap.Int("year", year), zap.Any("data", data))
+	slog.Info("wrapped cache update", "year", year, "data", data)
 	// update cache then return
 	s.wrapped[year] = data
 	return data, nil

@@ -3,12 +3,11 @@ package pizza
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 func Edit(args []string) {
@@ -28,7 +27,8 @@ func Edit(args []string) {
 	var err error
 	accessor, err = NewSQLAccessor(config.DBFile, false)
 	if err != nil {
-		Log.Fatal("sql accessor init failure", zap.Error(err))
+		slog.Error("sql accessor init failure", "err", err)
+		os.Exit(1)
 	}
 
 	if len(*add) > 0 {

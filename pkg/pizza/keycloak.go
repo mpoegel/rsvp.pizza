@@ -2,11 +2,11 @@ package pizza
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	gocloak "github.com/Nerzal/gocloak/v13"
 	jwt "github.com/golang-jwt/jwt/v5"
-	zap "go.uber.org/zap"
 )
 
 const (
@@ -46,12 +46,12 @@ func NewKeycloak(config OAuth2Config) (*Keycloak, error) {
 
 	res, err := k.client.RetrospectToken(ctx, jwt.AccessToken, config.ClientID, config.ClientSecret, config.Realm)
 	if err != nil {
-		Log.Error("keycloak token retrospect failed", zap.Error(err))
+		slog.Error("keycloak token retrospect failed", "error", err)
 	} else {
 		if !*res.Active {
-			Log.Error("keycloak token not active")
+			slog.Error("keycloak token not active")
 		} else {
-			Log.Info("keycloak token", zap.Any("permissions", res.Permissions))
+			slog.Info("keycloak token", "permissions", res.Permissions)
 		}
 	}
 

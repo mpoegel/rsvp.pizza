@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -14,7 +15,6 @@ import (
 	jsonapi "github.com/google/jsonapi"
 	mux "github.com/gorilla/mux"
 	api "github.com/mpoegel/rsvp.pizza/pkg/api"
-	zap "go.uber.org/zap"
 )
 
 func WriteAPIError(err error, status int, w http.ResponseWriter) {
@@ -35,7 +35,7 @@ func (s *Server) HandleAPIAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseForm(); err != nil {
-		Log.Error("form parse failure on admin edit", zap.Error(err))
+		slog.Error("form parse failure on admin edit", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -62,7 +62,7 @@ func (s *Server) HandleAPIAuth(w http.ResponseWriter, r *http.Request) {
 
 	encoder := json.NewEncoder(w)
 	if err = encoder.Encode(jwt); err != nil {
-		Log.Error("json encoding failure", zap.Error(err))
+		slog.Error("json encoding failure", "error", err)
 	}
 }
 
@@ -112,7 +112,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	} else {
 		fridays, err = s.store.GetUpcomingFridays(30)
 		if err != nil {
-			Log.Error("failed to get fridays", zap.Error(err))
+			slog.Error("failed to get fridays", "error", err)
 			WriteAPIError(errors.New("database error"), http.StatusInternalServerError, w)
 			return
 		}
@@ -142,7 +142,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 		}
 
 		if event, err := s.calendar.GetEvent(id); err != nil && err != ErrEventNotFound {
-			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", id))
+			slog.Warn("failed to get calendar event", "error", err, "eventID", id)
 		} else {
 			friday.Guests = make([]*api.Guest, len(event.Attendees))
 			for k, email := range event.Attendees {
@@ -171,7 +171,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	}
 
 	if err != nil {
-		Log.Warn("api marshal payload", zap.Error(err))
+		slog.Warn("api marshal payload", "error", err)
 		WriteAPIError(errors.New("failed to compose response data"), http.StatusInternalServerError, w)
 	}
 }
@@ -233,7 +233,7 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	}
 
 	// all good to update invite
-	Log.Info("rsvp request", zap.String("email", claims.Email))
+	slog.Info("rsvp request", "email", claims.Email)
 
 	if err = s.CreateAndInvite(friday.ID, f, claims.Email, claims.Name); err != nil {
 		WriteAPIError(errors.New("calendar failure"), http.StatusInternalServerError, w)
@@ -241,7 +241,7 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	}
 
 	if event, err := s.calendar.GetEvent(friday.ID); err != nil && err != ErrEventNotFound {
-		Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", friday.ID))
+		slog.Warn("failed to get calendar event", "error", err, "eventID", friday.ID)
 	} else {
 		friday.Guests = make([]*api.Guest, len(event.Attendees))
 		for k, email := range event.Attendees {
@@ -260,7 +260,7 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	w.WriteHeader(http.StatusOK)
 
 	if err = jsonapi.MarshalPayload(w, friday); err != nil {
-		Log.Warn("api marshal payload", zap.Error(err))
+		slog.Warn("api marshal payload", "error", err)
 		WriteAPIError(errors.New("failed to compose response data"), http.StatusInternalServerError, w)
 	}
 }

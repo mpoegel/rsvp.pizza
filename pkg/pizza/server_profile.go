@@ -2,11 +2,11 @@ package pizza
 
 import (
 	"html/template"
+	"log/slog"
 	"net/http"
 	"path"
 
-	"github.com/mpoegel/rsvp.pizza/pkg/types"
-	zap "go.uber.org/zap"
+	types "github.com/mpoegel/rsvp.pizza/pkg/types"
 )
 
 type Preference struct {
@@ -26,7 +26,7 @@ type ProfilePageData struct {
 func (s *Server) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/profile.html"))
 	if err != nil {
-		Log.Error("template index failure", zap.Error(err))
+		slog.Error("template index failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -47,7 +47,7 @@ func (s *Server) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
 
 		prefs, err := s.store.GetPreferences(claims.Email)
 		if err != nil {
-			Log.Error("failed to get preferences", zap.Error(err), zap.String("email", claims.Email))
+			slog.Error("failed to get preferences", "error", err, "email", claims.Email)
 		}
 		for _, t := range prefs.Toppings {
 			toppings[t] = true
@@ -99,7 +99,7 @@ func (s *Server) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = plate.ExecuteTemplate(w, "Profile", data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -113,7 +113,7 @@ func (s *Server) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseForm(); err != nil {
-		Log.Error("form parse failure on profile edit", zap.Error(err))
+		slog.Error("form parse failure on profile edit", "error", err)
 		w.Write(getToast("bad request"))
 		return
 	}
@@ -125,10 +125,10 @@ func (s *Server) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		Doneness: types.ParseDoneness(r.Form["doneness"][0]),
 	}
 
-	Log.Info("got profile update", zap.Any("preferences", prefs))
+	slog.Info("got profile update", "preferences", prefs)
 
 	if err := s.store.SetPreferences(claims.Email, prefs); err != nil {
-		Log.Error("failed to set preferences", zap.Error(err), zap.String("email", claims.Email))
+		slog.Error("failed to set preferences", "error", err, "email", claims.Email)
 		w.Write(getToast("failed to set preferences"))
 		return
 	}

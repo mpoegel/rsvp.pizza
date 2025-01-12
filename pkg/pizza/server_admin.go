@@ -2,13 +2,12 @@ package pizza
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
 	"strconv"
 	"text/template"
 	"time"
-
-	zap "go.uber.org/zap"
 )
 
 const futureFridayLimit = 30
@@ -44,12 +43,12 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/admin.html"))
 	if err != nil {
-		Log.Error("template submit failure", zap.Error(err))
+		slog.Error("template submit failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
 	if _, err = plate.ParseGlob(path.Join(s.config.StaticDir, "html/snippets/*.html")); err != nil {
-		Log.Error("template snippets submit failure", zap.Error(err))
+		slog.Error("template snippets submit failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -60,9 +59,9 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	allFridays := getFutureFridays()
 	setFridays, err := s.store.GetUpcomingFridays(futureFridayLimit)
-	Log.Info("loaded data", zap.Any("fridays", setFridays))
+	slog.Info("loaded data", "fridays", setFridays)
 	if err != nil {
-		Log.Error("failed to get fridays", zap.Error(err))
+		slog.Error("failed to get fridays", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -93,7 +92,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 
 		eventID := strconv.FormatInt(f.ID, 10)
 		if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
-			Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
+			slog.Warn("failed to get calendar event", "error", err, "eventID", eventID)
 			f.Guests = make([]string, 0)
 		} else if err != nil {
 			f.Guests = make([]string, 0)
@@ -112,7 +111,7 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = plate.ExecuteTemplate(w, "Admin", data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -124,7 +123,7 @@ func getToast(msg string) []byte {
 
 func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		Log.Error("form parse failure on admin edit", zap.Error(err))
+		slog.Error("form parse failure on admin edit", "error", err)
 		w.Write(getToast("bad request"))
 		return
 	}
@@ -136,17 +135,17 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 	dates := r.Form["date"]
 	needsActivation := len(r.Form["activate"]) > 0
 
-	Log.Info("admin edit", zap.Strings("dates", dates),
-		zap.Strings("group", group),
-		zap.Strings("details", details),
-		zap.Strings("maxGuests", maxGuestsStr),
-		zap.Strings("isActive", isActive),
-		zap.Bool("needsActivation", needsActivation))
+	slog.Info("admin edit", "dates", dates,
+		"group", group,
+		"details", details,
+		"maxGuests", maxGuestsStr,
+		"isActive", isActive,
+		"needsActivation", needsActivation)
 
 	loc, _ := time.LoadLocation("America/New_York")
 	num, err := strconv.ParseInt(dates[0], 10, 64)
 	if err != nil {
-		Log.Error("failed parsing date int from rsvp form", zap.String("date", dates[0]))
+		slog.Error("failed parsing date int from rsvp form", "date", dates[0])
 		w.Write(getToast("parse error"))
 		return
 	}
@@ -172,31 +171,31 @@ func (s *Server) HandleAdminEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exists, err := s.store.DoesFridayExist(friday.Date); err != nil {
-		Log.Error("failed check friday", zap.Error(err))
+		slog.Error("failed check friday", "error", err)
 	} else if needsActivation && !exists {
 		err := s.store.AddFriday(friday.Date)
 		if err != nil {
-			Log.Error("failed to add friday", zap.Error(err))
+			slog.Error("failed to add friday", "error", err)
 			w.Write(getToast("failed to add friday"))
 		} else if err = s.store.UpdateFriday(friday); err != nil {
-			Log.Error("failed to update friday", zap.Error(err))
+			slog.Error("failed to update friday", "error", err)
 			w.Write(getToast("failed to update friday"))
 		} else {
-			Log.Info("added friday", zap.Any("friday", friday))
+			slog.Info("added friday", "friday", friday)
 			w.Write(getToast("added friday"))
 		}
 	} else if !needsActivation && exists {
 		if err := s.store.UpdateFriday(friday); err != nil {
-			Log.Error("failed to disable friday", zap.Error(err))
+			slog.Error("failed to disable friday", "error", err)
 		} else {
-			Log.Info("disabled friday", zap.Time("date", friday.Date))
+			slog.Info("disabled friday", "date", friday.Date)
 			w.Write(getToast("disabled friday"))
 		}
 	} else if err = s.store.UpdateFriday(friday); err != nil {
-		Log.Error("failed to update friday", zap.Error(err))
+		slog.Error("failed to update friday", "error", err)
 		w.Write(getToast("failed to update friday"))
 	} else {
-		Log.Info("updated", zap.Any("friday", friday))
+		slog.Info("updated", "friday", friday)
 		w.Write(getToast("updated friday"))
 	}
 }

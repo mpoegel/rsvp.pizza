@@ -1,24 +1,16 @@
 package pizza
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	zap "go.uber.org/zap"
 	yaml "gopkg.in/yaml.v2"
 )
 
-var Log *zap.Logger
-
 func init() {
-	var err error
-	Log, err = zap.NewDevelopment()
-	if err != nil {
-		panic(fmt.Sprintf("could not create logger: %v", err))
-	}
+	// TODO set JSON logger
 	AllPatches = []func(*SQLAccessor) error{
 		func(*SQLAccessor) error { return nil },
 		Patch001,

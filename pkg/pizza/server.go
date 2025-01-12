@@ -3,6 +3,7 @@ package pizza
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	mux "github.com/gorilla/mux"
-	zap "go.uber.org/zap"
 	oauth2 "golang.org/x/oauth2"
 )
 
@@ -49,7 +49,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 
 	var accessor Accessor
 	var err error
-	Log.Info("using the sqlite accessor")
+	slog.Info("using the sqlite accessor")
 	accessor, err = NewSQLAccessor(config.DBFile, false)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	}
 	k, err := NewKeycloak(config.OAuth2)
 	if err != nil {
-		Log.Error("keycloak failure", zap.Error(err))
+		slog.Error("keycloak failure", "error", err)
 		return nil, err
 	}
 
@@ -135,7 +135,7 @@ func (s *Server) Start() error {
 	go s.WatchCalendar(1 * time.Hour)
 	// start the HTTP server
 	if err := s.s.ListenAndServe(); err != http.ErrServerClosed {
-		Log.Error("http listen error", zap.Error(err))
+		slog.Error("http listen error", "error", err)
 		return err
 	}
 	return nil
@@ -151,9 +151,9 @@ func (s *Server) WatchCalendar(period time.Duration) {
 	timer := time.NewTimer(period)
 	for {
 		if _, err := s.calendar.ListEvents(1); err != nil {
-			Log.Warn("failed to list calendar events", zap.Error(err))
+			slog.Warn("failed to list calendar events", "error", err)
 		} else {
-			Log.Debug("calendar credentials are valid")
+			slog.Debug("calendar credentials are valid")
 		}
 		<-timer.C
 		timer.Reset(period)
@@ -184,7 +184,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/index.html"))
 	if err != nil {
-		Log.Error("template index failure", zap.Error(err))
+		slog.Error("template index failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -197,10 +197,10 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		data.LoggedIn = true
 		data.IsAdmin = claims.HasRole("pizza_host")
 
-		Log.Info("welcome", zap.String("name", claims.Name))
+		slog.Info("welcome", "name", claims.Name)
 
 		if err = s.store.AddFriend(claims.Email, claims.Name); err != nil {
-			Log.Warn("failed to add friend", zap.Error(err))
+			slog.Warn("failed to add friend", "error", err)
 		}
 
 		data.Name = claims.GivenName
@@ -208,7 +208,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 		fridays, err := s.store.GetUpcomingFridays(30)
 		if err != nil {
-			Log.Error("failed to get fridays", zap.Error(err))
+			slog.Error("failed to get fridays", "error", err)
 			s.Handle500(w, r)
 			return
 		}
@@ -244,7 +244,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			// get the calendar event to see who has already RSVP'ed
 			// TODO switch to using the local guest list instead of the calendar
 			if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
-				Log.Warn("failed to get calendar event", zap.Error(err), zap.String("eventID", eventID))
+				slog.Warn("failed to get calendar event", "error", err, "eventID", eventID)
 				fData.Guests = make([]string, 0)
 			} else if err != nil {
 				fData.Guests = make([]string, 0)
@@ -263,7 +263,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -276,7 +276,7 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Log.Debug("incoming submit request", zap.Stringer("url", r.URL))
+	slog.Debug("incoming submit request", "url", r.URL)
 
 	form := r.URL.Query()
 	dates, ok := form["date"]
@@ -285,12 +285,12 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := strings.ToLower(claims.Email)
-	Log.Debug("rsvp request", zap.String("email", email), zap.Strings("dates", dates))
+	slog.Debug("rsvp request", "email", email, "dates", dates)
 
 	for _, d := range dates {
 		num, err := strconv.ParseInt(d, 10, 64)
 		if err != nil {
-			Log.Error("failed parsing date int from rsvp form", zap.String("date", d))
+			slog.Error("failed parsing date int from rsvp form", "date", d)
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 			return
 		}
@@ -298,14 +298,14 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 		friday, err := s.store.GetFriday(time.Unix(num, 0).In(estZone))
 		if err != nil {
 			// friday does not exist
-			Log.Info("friday does not exist", zap.Error(err))
+			slog.Info("friday does not exist", "error", err)
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 			return
 		}
 
 		if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
 			// not part of invited group OR friday not enabled
-			Log.Info("friday not enabled or claims check")
+			slog.Info("friday not enabled or claims check")
 			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 			return
 		}
@@ -336,24 +336,24 @@ func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) e
 
 	// update local table with new guest list
 	if err := s.store.AddFriendToFriday(email, friday); err != nil {
-		Log.Error("update to local invite list failed", zap.Error(err))
+		slog.Error("update to local invite list failed", "error", err)
 		return err
 	}
 
 	err := s.calendar.InviteToEvent(ID, email, name)
 	if err != nil && err == ErrEventNotFound {
 		if err = s.calendar.CreateEvent(newEvent); err != nil {
-			Log.Error("could not create event", zap.String("eventID", ID), zap.String("email", email), zap.Error(err))
+			slog.Error("could not create event", "eventID", ID, "email", email, "error", err)
 			return err
 		}
 		err = s.calendar.InviteToEvent(ID, email, name)
 	}
 	if err != nil {
-		Log.Error("invite failed", zap.String("eventID", ID), zap.String("email", email), zap.Error(err))
+		slog.Error("invite failed", "eventID", ID, "email", email, "error", err)
 		return err
 	}
 
-	Log.Debug("event updated", zap.String("eventID", ID), zap.String("email", email), zap.String("name", name))
+	slog.Debug("event updated", "eventID", ID, "email", email, "name", name)
 	return nil
 }
 
@@ -361,13 +361,13 @@ func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {
 	s.requestErrorMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/4xx.html"))
 	if err != nil {
-		Log.Error("template 4xx failure", zap.Error(err))
+		slog.Error("template 4xx failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
 	data := PageData{}
 	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -377,13 +377,13 @@ func (s *Server) Handle500(w http.ResponseWriter, r *http.Request) {
 	s.internalErrorMetric.Increment()
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/500.html"))
 	if err != nil {
-		Log.Error("template 500 failure", zap.Error(err))
+		slog.Error("template 500 failure", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	data := PageData{}
 	if err = plate.Execute(w, data); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

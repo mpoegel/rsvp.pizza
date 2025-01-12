@@ -3,6 +3,7 @@ package pizza
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"path"
 	"strings"
@@ -11,7 +12,6 @@ import (
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	uuid "github.com/google/uuid"
-	zap "go.uber.org/zap"
 )
 
 type TokenClaims struct {
@@ -145,7 +145,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	if _, ok := s.sessions[state]; !ok {
-		Log.Warn("state did not match")
+		slog.Warn("state did not match")
 		http.Error(w, "state did not match", http.StatusBadRequest)
 		return
 	}
@@ -153,33 +153,33 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	oauth2Token, err := s.oauth2Conf.Exchange(ctx, r.URL.Query().Get("code"))
 	if err != nil {
-		Log.Warn("failed to exchange code for token", zap.Error(err))
+		slog.Warn("failed to exchange code for token", "error", err)
 		http.Error(w, "auth error", http.StatusInternalServerError)
 		return
 	}
 
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 	if !ok {
-		Log.Warn("no id_token field in oauth2 token")
+		slog.Warn("no id_token field in oauth2 token")
 		http.Error(w, "auth error", http.StatusInternalServerError)
 		return
 	}
 
 	idToken, err := s.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
-		Log.Warn("failed to verify ID token", zap.Error(err))
+		slog.Warn("failed to verify ID token", "error", err)
 		http.Error(w, "auth error", http.StatusInternalServerError)
 		return
 	}
 
 	var claims TokenClaims
 	if err := idToken.Claims(&claims); err != nil {
-		Log.Warn("failed to get claims", zap.Error(err))
+		slog.Warn("failed to get claims", "error", err)
 		http.Error(w, "auth error", http.StatusInternalServerError)
 		return
 	}
 
-	Log.Info("login success", zap.Any("claims", claims))
+	slog.Info("login success", "claims", claims)
 	cookie := &http.Cookie{
 		Name:     "session",
 		Value:    state,
@@ -192,7 +192,7 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 		cookie.SameSite = http.SameSiteNoneMode
 	}
 	if err := cookie.Valid(); err != nil {
-		Log.Warn("bad cookie", zap.Error(err))
+		slog.Warn("bad cookie", "error", err)
 	}
 	http.SetCookie(w, cookie)
 	r.AddCookie(cookie)
@@ -210,13 +210,13 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/logout.html"))
 	if err != nil {
-		Log.Error("template submit failure", zap.Error(err))
+		slog.Error("template submit failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
 
 	if err = plate.Execute(w, nil); err != nil {
-		Log.Error("template execution failure", zap.Error(err))
+		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}

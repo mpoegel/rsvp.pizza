@@ -2,11 +2,11 @@ package pizza
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.uber.org/zap"
 )
 
 type PrometheusRegistry struct {
@@ -20,11 +20,11 @@ func NewPrometheusRegistry() *PrometheusRegistry {
 }
 
 func (reg *PrometheusRegistry) Serve(port int) {
-	Log.Info("serving metrics", zap.Int("port", port))
+	slog.Info("serving metrics", "port", port)
 	http.Handle("/metrics", promhttp.HandlerFor(reg.reg, promhttp.HandlerOpts{Registry: reg.reg}))
 	err := http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), nil)
 	if err != nil && err != http.ErrServerClosed {
-		Log.Error("prometheus serve failure", zap.Error(err))
+		slog.Error("prometheus serve failure", "error", err)
 	}
 }
 

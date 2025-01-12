@@ -2,13 +2,13 @@ package pizza_test
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/mpoegel/rsvp.pizza/pkg/pizza"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 func TestCalendarInvite(t *testing.T) {
@@ -43,5 +43,5 @@ func TestCalendarInvite(t *testing.T) {
 	event, err := gCal.GetEvent(eventID)
 	require.Nil(t, err)
 
-	pizza.Log.Debug("got event", zap.Any("event", event))
+	slog.Debug("got event", "event", event)
 }
