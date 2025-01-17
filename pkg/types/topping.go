@@ -91,3 +91,35 @@ func (t Topping) String() string {
 		return ""
 	}
 }
+func (t Topping) Color() string {
+	switch t {
+	case Banana_Peppers:
+		return "#ece852;"
+	case Basil:
+		return "#355f2e;"
+	case Buffalo_Chicken:
+		return "#f26b0f;"
+	case Barbecue_Chicken:
+		return "#3b3030;"
+	case Jalapeno:
+		return "#04471c;"
+	case Pepperoni:
+		return "#8f250c;"
+	case Prosciutto:
+		return "#ffcce1;"
+	case Soppressata:
+		return "#b03052;"
+	case Sausage:
+		return "#997c70;"
+	case Ham:
+		return "#c890a7;"
+	case Pineapple:
+		return "#ffd65a;"
+	case Green_Pepper:
+		return "#185519;"
+	case Mushroom:
+		return "#c8aaaa;"
+	default:
+		return ""
+	}
+}

@@ -51,3 +51,20 @@ func (c Cheese) String() string {
 		return ""
 	}
 }
+
+func (c Cheese) Color() string {
+	switch c {
+	case Shredded_Mozzarella:
+		return "#fff9e8;"
+	case Whole_Mozzarella:
+		return "#fcf4eb;"
+	case Cheddar:
+		return "#ffbc42;"
+	case Ricotta:
+		return "#fff9e8;"
+	case Parmesan:
+		return "#f3c677;"
+	default:
+		return ""
+	}
+}

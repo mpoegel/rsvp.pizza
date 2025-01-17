@@ -51,3 +51,20 @@ func (s Sauce) String() string {
 		return ""
 	}
 }
+
+func (s Sauce) Color() string {
+	switch s {
+	case Raw_Tomatoes:
+		return "#e01e37;"
+	case Cooked_Tomatoes:
+		return "#d90429;"
+	case Basil_Pesto:
+		return "#596236;"
+	case Vodka:
+		return "#ff7f51;"
+	case Alfredo:
+		return "#ffe3e0;"
+	default:
+		return ""
+	}
+}

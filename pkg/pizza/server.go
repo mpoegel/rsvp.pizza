@@ -127,6 +127,8 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	r.HandleFunc("/api/friday", s.HandleAPIFriday)
 	r.HandleFunc("/api/friday/{ID}", s.HandleAPIFriday)
 
+	r.HandleFunc("/p/{ID}", s.HandlePizza)
+
 	return &s, nil
 }
 
@@ -355,6 +357,19 @@ func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) e
 
 	slog.Debug("event updated", "eventID", ID, "email", email, "name", name)
 	return nil
+}
+
+func (s *Server) HandlePizza(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["ID"]
+	pixelPizza, err := NewPixelPizzaFromID(id)
+	if err != nil {
+		slog.Warn("failed to parse pizza ID", "id", id, "err", err)
+		s.Handle4xx(w, r)
+		return
+	}
+	slog.Info("generated pizza", "id", pixelPizza.ID(), "pizza", pixelPizza.String())
+	w.Write([]byte(pixelPizza.HTML()))
 }
 
 func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {

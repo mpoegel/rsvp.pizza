@@ -43,3 +43,20 @@ func (d Doneness) String() string {
 		return ""
 	}
 }
+
+func (d Doneness) Color() string {
+	switch d {
+	case Well_Done:
+		return "#2f0e07;"
+	case Medium_Well:
+		return "#4a2419;"
+	case Medium:
+		return "#6e4230;"
+	case Medium_Rare:
+		return "#9d6b53;"
+	case Rare:
+		return "#deab90;"
+	default:
+		return ""
+	}
+}
