@@ -179,6 +179,7 @@ type PageData struct {
 	LoggedIn    bool
 	LogoutURL   string
 	IsAdmin     bool
+	PixelPizza  PixelPizzaPageData
 }
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
@@ -190,6 +191,12 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		s.Handle500(w, r)
 		return
 	}
+	if _, err = plate.ParseGlob(path.Join(s.config.StaticDir, "html/snippets/*.html")); err != nil {
+		slog.Error("template snippets parse failure", "error", err)
+		s.Handle500(w, r)
+		return
+	}
+
 	data := PageData{
 		LoggedIn: false,
 	}
@@ -207,6 +214,13 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 		data.Name = claims.GivenName
 		data.LogoutURL = fmt.Sprintf("%s/%s?post_logout_redirect_uri=%s/logout&client_id=%s", s.oauth2Conf.Endpoint.AuthURL, "../logout", s.config.OAuth2.RedirectURL, "pizza")
+
+		if prefs, err := s.store.GetPreferences(claims.Email); err != nil {
+			slog.Error("failed to get user preferences", "email", claims.Email, "err", err)
+		} else {
+			data.PixelPizza.Pizza = NewPixelPizzaFromPreferences(prefs).Render("darkblue")
+			data.PixelPizza.Size = "4px"
+		}
 
 		fridays, err := s.store.GetUpcomingFridays(30)
 		if err != nil {
@@ -359,6 +373,11 @@ func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) e
 	return nil
 }
 
+type PixelPizzaPageData struct {
+	Size  string
+	Pizza [][]string
+}
+
 func (s *Server) HandlePizza(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["ID"]
@@ -369,7 +388,7 @@ func (s *Server) HandlePizza(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("generated pizza", "id", pixelPizza.ID(), "pizza", pixelPizza.String())
-	w.Write([]byte(pixelPizza.HTML()))
+	w.Write([]byte(pixelPizza.HTML("#fff;")))
 }
 
 func (s *Server) Handle4xx(w http.ResponseWriter, r *http.Request) {

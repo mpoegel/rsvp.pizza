@@ -11,7 +11,8 @@
     <h2>RSVP For Pizza</h2>
 
     {{if .LoggedIn}}
-    <p>Hi {{.Name}}</p>
+    <p> Hi {{.Name}}</p>
+    {{template "PixelPizza" .PixelPizza}}
 
     <table id="friday-table">
         {{range .FridayTimes}}

@@ -1,10 +1,10 @@
 package pizza
 
 import (
-	"html/template"
 	"log/slog"
 	"net/http"
 	"path"
+	"text/template"
 
 	types "github.com/mpoegel/rsvp.pizza/pkg/types"
 )
@@ -15,18 +15,24 @@ type Preference struct {
 }
 
 type ProfilePageData struct {
-	LoggedIn bool
-	Name     string
-	Toppings []Preference
-	Cheese   []Preference
-	Sauce    []Preference
-	Doneness []Preference
+	LoggedIn   bool
+	Name       string
+	Toppings   []Preference
+	Cheese     []Preference
+	Sauce      []Preference
+	Doneness   []Preference
+	PixelPizza PixelPizzaPageData
 }
 
 func (s *Server) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/profile.html"))
 	if err != nil {
 		slog.Error("template index failure", "error", err)
+		s.Handle500(w, r)
+		return
+	}
+	if _, err = plate.ParseGlob(path.Join(s.config.StaticDir, "html/snippets/*.html")); err != nil {
+		slog.Error("template snippets parse failure", "error", err)
 		s.Handle500(w, r)
 		return
 	}
@@ -59,6 +65,9 @@ func (s *Server) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
 			sauces[s] = true
 		}
 		doneness = prefs.Doneness
+
+		data.PixelPizza.Pizza = NewPixelPizzaFromPreferences(prefs).Render("darkblue")
+		data.PixelPizza.Size = "33px"
 	}
 
 	data.Toppings = []Preference{

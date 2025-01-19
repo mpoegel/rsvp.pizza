@@ -48,6 +48,18 @@ func NewPixelPizza() *PixelPizza {
 	return p
 }
 
+func NewPixelPizzaFromPreferences(prefs Preferences) *PixelPizza {
+	p := NewPixelPizza()
+	p.toppings = prefs.Toppings
+	p.cheeses = prefs.Cheese
+	p.crust = prefs.Doneness
+
+	if len(prefs.Sauce) > 0 {
+		p.sauce = prefs.Sauce[0]
+	}
+	return p
+}
+
 func NewPixelPizzaFromID(ID string) (*PixelPizza, error) {
 	parts := strings.SplitN(ID, "-", 4)
 	if len(parts) != 4 {
@@ -165,26 +177,18 @@ func (p *PixelPizza) Render(background string) [][]string {
 	return res
 }
 
-func (p *PixelPizza) HTML() string {
-	res := "<html>"
-	for _, row := range p.Render("#fff;") {
+func (p *PixelPizza) HTML(background string) string {
+	res := ""
+	for _, row := range p.Render(background) {
+		res += "<div>"
 		for _, color := range row {
 			res += fmt.Sprintf("<span style='color:%s'>&#9608;&#9608;</span>", color)
 		}
-		res += "<br>"
+		res += "</div>"
 	}
-	res += "</html>"
 	return res
 }
 
 func (p *PixelPizza) Image() {
 
-}
-
-func SetFromList[T comparable](list []T) map[T]bool {
-	res := map[T]bool{}
-	for _, item := range list {
-		res[item] = false
-	}
-	return res
 }

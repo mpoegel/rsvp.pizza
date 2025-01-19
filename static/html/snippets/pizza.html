@@ -1,0 +1,9 @@
+{{define "PixelPizza"}}
+<span class="pixel-pizza" style="font-size:{{.Size}}">
+    {{range $i, $row := .Pizza}}
+    <div>
+        {{range $k, $color := $row}}<span style="color: {{ $color }} ">&#9608;&#9608;</span>{{end}}
+    </div>
+    {{end}}
+</span>
+{{end}}
