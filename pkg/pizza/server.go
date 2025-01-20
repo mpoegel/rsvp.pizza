@@ -219,7 +219,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			slog.Error("failed to get user preferences", "email", claims.Email, "err", err)
 		} else {
 			data.PixelPizza.Pizza = NewPixelPizzaFromPreferences(prefs).Render("darkblue")
-			data.PixelPizza.Size = "4px"
+			data.PixelPizza.Size = "12px"
 		}
 
 		fridays, err := s.store.GetUpcomingFridays(30)

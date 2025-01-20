@@ -67,12 +67,10 @@
     <br><br>
 
     <div class="btn-update">
-        <span class="toast"></span>
-        <button class="btn" hx-post="/profile/edit" hx-swap="outerHTML settle:3s" hx-target="previous .toast"
+        <button class="btn" hx-post="/profile/edit" hx-swap="outerHTML settle:3s" hx-target="next span"
             hx-include="#preferences">Update</button>
+        {{template "PixelPizza" .PixelPizza}}
     </div>
-
-    {{template "PixelPizza" .PixelPizza}}
 
     <br><br><br>
     <a href="/">pizza</a> |

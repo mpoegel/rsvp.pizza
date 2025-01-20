@@ -142,5 +142,21 @@ func (s *Server) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(getToast("preferences updated"))
+	data := PixelPizzaPageData{
+		Pizza: NewPixelPizzaFromPreferences(prefs).Render("darkblue"),
+		Size:  "33px",
+	}
+
+	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/pizza.html"))
+	if err != nil {
+		slog.Error("template index failure", "error", err)
+		s.Handle500(w, r)
+		return
+	}
+
+	if err = plate.ExecuteTemplate(w, "PixelPizza", data); err != nil {
+		slog.Error("template execution failure", "error", err)
+		s.Handle500(w, r)
+		return
+	}
 }

@@ -153,17 +153,17 @@ func (p *PixelPizza) Render(background string) [][]string {
 				if !isOnPizza {
 					res[i][k] = background
 				} else {
-					if len(p.cheeses) > 0 && toppingCount%2 == 1 && toppingCount/2 < len(p.cheeses) {
-						res[i][k] = p.cheeses[toppingCount/2].Color()
-					} else if len(p.toppings) > 0 && toppingCount%2 == 1 {
-						res[i][k] = p.toppings[toppingCount/2-len(p.cheeses)].Color()
+					isCheese := toppingCount%2 == 1 || toppingCount%4 == 0
+					isTopping := toppingCount%2 == 1
+					modCount := toppingCount % maxCount
+					if len(p.cheeses) > 0 && isCheese && modCount/2 < len(p.cheeses) {
+						res[i][k] = p.cheeses[modCount/2].Color()
+					} else if len(p.toppings) > 0 && isTopping {
+						res[i][k] = p.toppings[modCount/2-len(p.cheeses)].Color()
 					} else {
 						res[i][k] = p.sauce.Color()
 					}
 					toppingCount++
-					if maxCount > 0 {
-						toppingCount = toppingCount % maxCount
-					}
 				}
 			} else {
 				res[i][k] = p.crust.Color()

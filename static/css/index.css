@@ -85,11 +85,6 @@ a {
     padding: 0 10px;
 }
 
-.btn-update {
-    display: flex;
-    justify-content: flex-end;
-}
-
 .btn-update .btn {
     color: black;
 }
