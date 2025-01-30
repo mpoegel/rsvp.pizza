@@ -12,8 +12,8 @@ Restart=always
 RestartSec=1
 EnvironmentFile=/etc/pizza/.env.prod
 ExecStart=/usr/local/bin/rsvp.pizza run
-StandardOutput=append:/var/log/homelab/pizza.zap.log
-StandardError=append:/var/log/homelab/pizza.zap.log
+StandardOutput=append:/var/log/homelab/pizza.slog.log
+StandardError=append:/var/log/homelab/pizza.slog.log
 
 [Install]
 WantedBy=multi-user.target

@@ -144,7 +144,7 @@ func (p *PixelPizza) String() string {
 func (p *PixelPizza) Render(background string) [][]string {
 	res := make([][]string, len(p.raw))
 	toppingCount := 0
-	maxCount := (len(p.cheeses) + len(p.toppings)) * 2
+	maxCount := max((len(p.cheeses)+len(p.toppings))*2, 1)
 	for i, row := range p.raw {
 		res[i] = make([]string, len(row))
 		isOnPizza := false
