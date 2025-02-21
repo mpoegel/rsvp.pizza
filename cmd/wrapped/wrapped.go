@@ -20,6 +20,7 @@ func main() {
 	credentialsFile := flag.String("cred", "credentials.json", "google calendar credential file")
 	tokenFile := flag.String("token", "token.json", "google calendar token file")
 	out := flag.String("out", "wrapped.json", "output file")
+	year := flag.Int("year", time.Now().Year(), "year for report")
 	flag.Parse()
 
 	calendarID := os.Getenv("CALENDAR_ID")
@@ -32,9 +33,9 @@ func main() {
 
 	cal := pizza.NewCalendar(googleCal)
 	start := time.Time{}
-	start = start.AddDate(2023, 1, 1)
+	start = start.AddDate(*year, 1, 1)
 	end := time.Time{}
-	end = end.AddDate(2023, 12, 31)
+	end = end.AddDate(*year, 12, 31)
 	events, err := cal.ListEventsBetween(start, end, 100)
 	if err != nil {
 		slog.Error("could not get events", "err", err)

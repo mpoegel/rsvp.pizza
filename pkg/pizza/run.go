@@ -10,6 +10,7 @@ import (
 func Run(args []string) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	fs.Parse(args)
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 
 	config := LoadConfigEnv()
 	metricsReg := NewPrometheusRegistry()

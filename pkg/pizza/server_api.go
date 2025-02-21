@@ -13,7 +13,6 @@ import (
 	gocloak "github.com/Nerzal/gocloak/v13"
 	jwt "github.com/golang-jwt/jwt/v5"
 	jsonapi "github.com/google/jsonapi"
-	mux "github.com/gorilla/mux"
 	api "github.com/mpoegel/rsvp.pizza/pkg/api"
 )
 
@@ -89,13 +88,13 @@ func (s *Server) HandleAPIFriday(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
 	fridays := make([]Friday, 0)
 	var err error
 	estZone, _ := time.LoadLocation("America/New_York")
 
-	fridayID, directReq := vars["ID"]
-	if directReq {
+	fridayID := r.PathValue("ID")
+	isDirectReq := len(fridayID) > 0
+	if isDirectReq {
 		rawTime, err := strconv.ParseInt(fridayID, 10, 64)
 		if err != nil {
 			WriteAPIError(err, http.StatusBadRequest, w)
@@ -135,10 +134,11 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 		// not part of invited group OR friday is disabled
 		if (f.Group != nil && !claims.InGroup(*f.Group)) || !f.Enabled {
 			// if this friday was specifically requested, the response needs to be 404
-			if directReq {
+			if isDirectReq {
 				WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", fridayID), http.StatusNotFound, w)
 				return
 			}
+			continue
 		}
 
 		if event, err := s.calendar.GetEvent(id); err != nil && err != ErrEventNotFound {
@@ -164,7 +164,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	w.WriteHeader(http.StatusOK)
 
 	// if a specific friday was requested, return an object not an array as per json api spec
-	if directReq {
+	if isDirectReq {
 		err = jsonapi.MarshalPayload(w, res[0])
 	} else {
 		err = jsonapi.MarshalPayload(w, res)

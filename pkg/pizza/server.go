@@ -12,7 +12,6 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	mux "github.com/gorilla/mux"
 	oauth2 "golang.org/x/oauth2"
 )
 
@@ -45,7 +44,7 @@ type Server struct {
 }
 
 func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
-	r := mux.NewRouter()
+	r := http.NewServeMux()
 
 	var accessor Accessor
 	var err error
@@ -110,24 +109,25 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 		sessions: map[string]*TokenClaims{},
 	}
 
-	r.HandleFunc("/", s.HandleIndex)
-	r.HandleFunc("/rsvp", s.HandleRSVP)
-	r.HandleFunc("/wrapped", s.HandledWrapped)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
-	r.HandleFunc("/login", s.HandleLogin)
-	r.HandleFunc("/login/callback", s.HandleLoginCallback)
-	r.HandleFunc("/logout", s.HandleLogout)
-	r.HandleFunc("/admin", s.HandleAdmin)
-	r.HandleFunc("/admin/edit", s.HandleAdminEdit)
+	r.HandleFunc("GET /", s.HandleIndex)
+	r.HandleFunc("POST /rsvp", s.HandleRSVP)
+	r.HandleFunc("GET /wrapped", s.HandledWrapped)
+	r.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
+	r.HandleFunc("GET /login", s.HandleLogin)
+	r.HandleFunc("GET /login/callback", s.HandleLoginCallback)
+	r.HandleFunc("GET /logout", s.HandleLogout)
+	r.HandleFunc("GET /admin", s.HandleAdmin)
+	r.HandleFunc("POST /admin/edit", s.HandleAdminEdit)
 
-	r.HandleFunc("/profile", s.HandleGetProfile)
-	r.HandleFunc("/profile/edit", s.HandleUpdateProfile)
+	r.HandleFunc("GET /profile", s.HandleGetProfile)
+	r.HandleFunc("POST /profile/edit", s.HandleUpdateProfile)
 
-	r.HandleFunc("/api/token", s.HandleAPIAuth)
-	r.HandleFunc("/api/friday", s.HandleAPIFriday)
-	r.HandleFunc("/api/friday/{ID}", s.HandleAPIFriday)
+	r.HandleFunc("POST /api/token", s.HandleAPIAuth)
+	r.HandleFunc("GET /api/friday", s.HandleAPIFriday)
+	r.HandleFunc("GET /api/friday/{ID}", s.HandleAPIFriday)
+	r.HandleFunc("PATCH /api/friday/{ID}", s.HandleAPIFriday)
 
-	r.HandleFunc("/p/{ID}", s.HandlePizza)
+	r.HandleFunc("GET /p/{ID}", s.HandlePizza)
 
 	return &s, nil
 }
@@ -379,8 +379,7 @@ type PixelPizzaPageData struct {
 }
 
 func (s *Server) HandlePizza(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["ID"]
+	id := r.PathValue("ID")
 	pixelPizza, err := NewPixelPizzaFromID(id)
 	if err != nil {
 		slog.Warn("failed to parse pizza ID", "id", id, "err", err)

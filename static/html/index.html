@@ -30,7 +30,10 @@
                 <span class="friday-details"><i>{{.Details}}</i></span>
                 <div class="btn-rsvp">
                     {{if .IsInvited}}
-                    <span>You're invited!</span>
+                    <span>You're invited!
+                        <button class="btn" hx-delete="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
+                            hx-swap="innerHTML">Decline</button>
+                    </span>
                     {{else if ge (len .Guests) .MaxGuests}}
                     <span>Event is full.</span>
                     {{else}}
