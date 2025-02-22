@@ -16,8 +16,6 @@ func main() {
 	switch args[1] {
 	case "run":
 		pizza.Run(os.Args[2:])
-	case "edit":
-		pizza.Edit(os.Args[2:])
 	case "patch":
 		pizza.Patch(os.Args[2:])
 	default:

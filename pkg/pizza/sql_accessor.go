@@ -66,20 +66,6 @@ func (a *SQLAccessor) PatchTables() error {
 	return err
 }
 
-// TODO delete
-func (a *SQLAccessor) IsFriendAllowed(email string) (bool, error) {
-	stmt, err := a.db.Prepare("select count(email) from friends where email = ?")
-	if err != nil {
-		return false, err
-	}
-	count := 0
-	err = stmt.QueryRow(email).Scan(&count)
-	if err != nil {
-		return false, nil
-	}
-	return count == 1, nil
-}
-
 func (a *SQLAccessor) GetFriendName(email string) (string, error) {
 	stmt, err := a.db.Prepare("select name from friends where email = ?")
 	if err != nil {
@@ -167,24 +153,6 @@ func (a *SQLAccessor) AddFriday(date time.Time) error {
 	return err
 }
 
-func (a *SQLAccessor) ListFriends() ([]Friend, error) {
-	stmt := "select email, name from friends"
-	rows, err := a.db.Query(stmt)
-	if err != nil {
-		return nil, err
-	}
-	res := make([]Friend, 0)
-	for rows.Next() {
-		f := Friend{}
-		err = rows.Scan(&f.Email, &f.Name)
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, f)
-	}
-	return res, nil
-}
-
 func (a *SQLAccessor) ListFridays() ([]Friday, error) {
 	stmt := "select start_time from fridays"
 	rows, err := a.db.Query(stmt)
@@ -203,16 +171,6 @@ func (a *SQLAccessor) ListFridays() ([]Friday, error) {
 		res = append(res, f)
 	}
 	return res, nil
-}
-
-// TODO delete
-func (a *SQLAccessor) RemoveFriend(email string) error {
-	stmt, err := a.db.Prepare("delete from friends where email = ?")
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec(email)
-	return err
 }
 
 func (a *SQLAccessor) GetFriday(date time.Time) (Friday, error) {

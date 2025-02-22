@@ -9,11 +9,8 @@ import (
 type Accessor interface {
 	CreateTables() error
 
-	IsFriendAllowed(email string) (bool, error)
 	GetFriendName(email string) (string, error)
 	AddFriend(email, name string) error
-	ListFriends() ([]Friend, error)
-	RemoveFriend(email string) error
 
 	GetUpcomingFridays(daysAhead int) ([]Friday, error)
 	GetUpcomingFridaysAfter(after time.Time, daysAhead int) ([]Friday, error)

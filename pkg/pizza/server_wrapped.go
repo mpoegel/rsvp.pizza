@@ -39,12 +39,14 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(email) > 0 {
-		allowed, err := s.store.IsFriendAllowed(email)
-		if err != nil {
-			slog.Error("is friend allowed check failed", "error", err)
-			s.Handle500(w, r)
-			return
-		}
+		allowed := false
+		// TODO update with auth
+		// allowed, err := s.store.IsFriendAllowed(email)
+		// if err != nil {
+		// 	slog.Error("is friend allowed check failed", "error", err)
+		// 	s.Handle500(w, r)
+		// 	return
+		// }
 		if !allowed {
 			s.Handle4xx(w, r)
 			return
