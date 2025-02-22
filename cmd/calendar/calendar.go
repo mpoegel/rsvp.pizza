@@ -1,4 +1,4 @@
-package pizza_test
+package main
 
 import (
 	"context"
@@ -44,4 +44,8 @@ func TestCalendarInvite(t *testing.T) {
 	require.Nil(t, err)
 
 	slog.Debug("got event", "event", event)
+}
+
+func main() {
+
 }

@@ -10,9 +10,6 @@ import (
 	"strings"
 	"text/template"
 	"time"
-
-	oidc "github.com/coreos/go-oidc"
-	oauth2 "golang.org/x/oauth2"
 )
 
 var EventDuration = time.Hour * 4
@@ -23,15 +20,11 @@ type WrappedData struct {
 }
 
 type Server struct {
-	s        http.Server
-	store    Accessor
-	calendar Calendar
-	config   Config
-
-	oauth2Provider *oidc.Provider
-	oauth2Conf     oauth2.Config
-	verifier       *oidc.IDTokenVerifier
-	authenticator  Authenticator
+	s             http.Server
+	config        Config
+	store         Accessor
+	calendar      Calendar
+	authenticator Authenticator
 
 	indexGetMetric      CounterMetric
 	submitPostMetric    CounterMetric
@@ -60,11 +53,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 	}
 
 	ctx := context.Background()
-	provider, err := oidc.NewProvider(ctx, config.OAuth2.KeycloakURL+"/realms/"+config.OAuth2.Realm)
-	if err != nil {
-		return nil, err
-	}
-	k, err := NewKeycloak(config.OAuth2)
+	k, err := NewKeycloak(ctx, config.OAuth2)
 	if err != nil {
 		slog.Error("keycloak failure", "error", err)
 		return nil, err
@@ -77,21 +66,9 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 			WriteTimeout: config.WriteTimeout,
 			Handler:      r,
 		},
-		store:    accessor,
-		calendar: googleCal,
-		config:   config,
-
-		oauth2Provider: provider,
-		oauth2Conf: oauth2.Config{
-			ClientID:     config.OAuth2.ClientID,
-			ClientSecret: config.OAuth2.ClientSecret,
-			RedirectURL:  config.OAuth2.RedirectURL + "/login/callback",
-			Endpoint:     provider.Endpoint(),
-			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
-		},
-		verifier: provider.Verifier(&oidc.Config{
-			ClientID: config.OAuth2.ClientID,
-		}),
+		config:        config,
+		store:         accessor,
+		calendar:      googleCal,
 		authenticator: k,
 
 		indexGetMetric: metricsReg.NewCounterMetric("pizza_requests",
@@ -213,7 +190,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data.Name = claims.GivenName
-		data.LogoutURL = fmt.Sprintf("%s/%s?post_logout_redirect_uri=%s/logout&client_id=%s", s.oauth2Conf.Endpoint.AuthURL, "../logout", s.config.OAuth2.RedirectURL, "pizza")
+		data.LogoutURL = fmt.Sprintf("%s/%s?post_logout_redirect_uri=%s/logout&client_id=%s", s.authenticator.GetAuthURL(), "../logout", s.config.OAuth2.RedirectURL, "pizza")
 
 		if prefs, err := s.store.GetPreferences(claims.Email); err != nil {
 			slog.Error("failed to get user preferences", "email", claims.Email, "err", err)

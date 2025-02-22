@@ -8,6 +8,12 @@ import (
 type Authenticator interface {
 	GetToken(ctx context.Context, opt AuthTokenOptions) (*JWT, error)
 	DecodeAccessToken(ctx context.Context, rawAccessToken string) (*AccessToken, error)
+
+	GetAuthCodeURL(ctx context.Context, state string) string
+	ExchangeCodeForToken(ctx context.Context, code string) (*IDToken, error)
+	VerifyToken(ctx context.Context, rawToken string) (*IDToken, error)
+
+	GetAuthURL() string
 }
 
 type AuthTokenOptions struct {
@@ -76,4 +82,13 @@ func (c *TokenClaims) InGroup(group string) bool {
 		}
 	}
 	return false
+}
+
+type IDToken struct {
+	Claims    TokenClaims
+	ExpiresAt time.Time
+	Audience  []string
+	Issuer    string
+	Nonce     string
+	Subject   string
 }

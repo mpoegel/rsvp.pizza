@@ -7,6 +7,8 @@ import (
 	"time"
 
 	gocloak "github.com/Nerzal/gocloak/v13"
+	oidc "github.com/coreos/go-oidc"
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -27,17 +29,32 @@ type Group struct {
 }
 
 type KeycloakAuthenticator struct {
-	client *gocloak.GoCloak
-	config OAuth2Config
-	jwt    *gocloak.JWT
+	client     *gocloak.GoCloak
+	oauth2Conf oauth2.Config
+	realm      string
+	verifier   *oidc.IDTokenVerifier
+	jwt        *gocloak.JWT
 }
 
-func NewKeycloak(config OAuth2Config) (*KeycloakAuthenticator, error) {
+func NewKeycloak(ctx context.Context, config OAuth2Config) (*KeycloakAuthenticator, error) {
+	provider, err := oidc.NewProvider(ctx, config.KeycloakURL+"/realms/"+config.Realm)
+	if err != nil {
+		return nil, err
+	}
 	k := &KeycloakAuthenticator{
 		client: gocloak.NewClient(config.KeycloakURL),
-		config: config,
+		oauth2Conf: oauth2.Config{
+			ClientID:     config.ClientID,
+			ClientSecret: config.ClientSecret,
+			RedirectURL:  config.RedirectURL + "/login/callback",
+			Endpoint:     provider.Endpoint(),
+			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		},
+		realm: config.Realm,
+		verifier: provider.Verifier(&oidc.Config{
+			ClientID: config.ClientID,
+		}),
 	}
-	ctx := context.Background()
 	jwt, err := k.client.LoginClient(ctx, config.ClientID, config.ClientSecret, config.Realm)
 	if err != nil {
 		return nil, err
@@ -64,10 +81,10 @@ func (k *KeycloakAuthenticator) GetToken(ctx context.Context, opt AuthTokenOptio
 		Password:     &opt.Password,
 		GrantType:    &opt.GrantType,
 		RefreshToken: &opt.RefreshToken,
-		ClientID:     &k.config.ClientID,
-		ClientSecret: &k.config.ClientSecret,
+		ClientID:     &k.oauth2Conf.ClientID,
+		ClientSecret: &k.oauth2Conf.ClientSecret,
 	}
-	jwt, err := k.client.GetToken(ctx, k.config.Realm, tokOpt)
+	jwt, err := k.client.GetToken(ctx, k.realm, tokOpt)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +102,7 @@ func (k *KeycloakAuthenticator) GetToken(ctx context.Context, opt AuthTokenOptio
 }
 
 func (k *KeycloakAuthenticator) DecodeAccessToken(ctx context.Context, rawAccessToken string) (*AccessToken, error) {
-	token, claims, err := k.client.DecodeAccessToken(ctx, rawAccessToken, k.config.Realm)
+	token, claims, err := k.client.DecodeAccessToken(ctx, rawAccessToken, k.realm)
 	if err != nil {
 		return nil, err
 	}
@@ -109,4 +126,51 @@ func (k *KeycloakAuthenticator) DecodeAccessToken(ctx context.Context, rawAccess
 		Valid:     token.Valid,
 		ExpiresAt: expTime.Time,
 	}, nil
+}
+
+func (k *KeycloakAuthenticator) GetAuthCodeURL(ctx context.Context, state string) string {
+	return k.oauth2Conf.AuthCodeURL(state)
+}
+
+func (k *KeycloakAuthenticator) ExchangeCodeForToken(ctx context.Context, code string) (*IDToken, error) {
+	oauth2Token, err := k.oauth2Conf.Exchange(ctx, code)
+	if err != nil {
+		slog.Warn("failed to exchange code for token", "error", err)
+		return nil, err
+	}
+
+	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	if !ok {
+		slog.Warn("no id_token field in oauth2 token")
+		return nil, err
+	}
+
+	return k.VerifyToken(ctx, rawIDToken)
+}
+
+func (k *KeycloakAuthenticator) VerifyToken(ctx context.Context, rawToken string) (*IDToken, error) {
+	idToken, err := k.verifier.Verify(ctx, rawToken)
+	if err != nil {
+		slog.Warn("failed to verify ID token", "error", err)
+		return nil, err
+	}
+
+	var claims TokenClaims
+	if err := idToken.Claims(&claims); err != nil {
+		slog.Warn("failed to get claims", "error", err)
+		return nil, err
+	}
+
+	return &IDToken{
+		Claims:    claims,
+		ExpiresAt: idToken.Expiry,
+		Audience:  idToken.Audience,
+		Issuer:    idToken.Issuer,
+		Nonce:     idToken.Nonce,
+		Subject:   idToken.Subject,
+	}, nil
+}
+
+func (k *KeycloakAuthenticator) GetAuthURL() string {
+	return k.oauth2Conf.Endpoint.AuthURL
 }

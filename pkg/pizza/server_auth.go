@@ -1,7 +1,6 @@
 package pizza
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"path"
@@ -63,7 +62,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	rawAccessToken := r.Header.Get("Authorization")
 	if rawAccessToken == "" {
 		s.sessions[state.String()] = nil
-		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
+		http.Redirect(w, r, s.authenticator.GetAuthCodeURL(r.Context(), state.String()), http.StatusFound)
 		return
 	}
 
@@ -73,11 +72,10 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
-	_, err := s.verifier.Verify(ctx, authParts[1])
+	_, err := s.authenticator.VerifyToken(r.Context(), authParts[1])
 	if err != nil {
 		s.sessions[state.String()] = nil
-		http.Redirect(w, r, s.oauth2Conf.AuthCodeURL(state.String()), http.StatusFound)
+		http.Redirect(w, r, s.authenticator.GetAuthCodeURL(r.Context(), state.String()), http.StatusFound)
 		return
 	}
 
@@ -93,36 +91,13 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
-	oauth2Token, err := s.oauth2Conf.Exchange(ctx, r.URL.Query().Get("code"))
+	idToken, err := s.authenticator.ExchangeCodeForToken(r.Context(), r.URL.Query().Get("code"))
 	if err != nil {
 		slog.Warn("failed to exchange code for token", "error", err)
 		http.Error(w, "auth error", http.StatusInternalServerError)
 		return
 	}
-
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		slog.Warn("no id_token field in oauth2 token")
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	idToken, err := s.verifier.Verify(ctx, rawIDToken)
-	if err != nil {
-		slog.Warn("failed to verify ID token", "error", err)
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	var claims TokenClaims
-	if err := idToken.Claims(&claims); err != nil {
-		slog.Warn("failed to get claims", "error", err)
-		http.Error(w, "auth error", http.StatusInternalServerError)
-		return
-	}
-
-	slog.Info("login success", "claims", claims)
+	slog.Info("login success", "claims", idToken.Claims)
 	cookie := &http.Cookie{
 		Name:     "session",
 		Value:    state,
@@ -140,7 +115,7 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 	r.AddCookie(cookie)
 
-	s.sessions[state] = &claims
+	s.sessions[state] = &idToken.Claims
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
