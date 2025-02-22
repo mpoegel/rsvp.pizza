@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	gocloak "github.com/Nerzal/gocloak/v13"
-	jwt "github.com/golang-jwt/jwt/v5"
 	jsonapi "github.com/hashicorp/jsonapi"
 	api "github.com/mpoegel/rsvp.pizza/pkg/api"
 )
@@ -39,21 +37,21 @@ func (s *Server) HandleAPIAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	opt := gocloak.TokenOptions{}
+	opt := AuthTokenOptions{}
 	if len(r.Form["username"]) > 0 {
-		opt.Username = &r.Form["username"][0]
+		opt.Username = r.Form["username"][0]
 	}
 	if len(r.Form["password"]) > 0 {
-		opt.Password = &r.Form["password"][0]
+		opt.Password = r.Form["password"][0]
 	}
 	if len(r.Form["grant_type"]) > 0 {
-		opt.GrantType = &r.Form["grant_type"][0]
+		opt.GrantType = r.Form["grant_type"][0]
 	}
 	if len(r.Form["refresh_token"]) > 0 {
-		opt.RefreshToken = &r.Form["refresh_token"][0]
+		opt.RefreshToken = r.Form["refresh_token"][0]
 	}
 
-	jwt, err := s.keycloak.GetToken(context.Background(), opt)
+	jwt, err := s.authenticator.GetToken(context.Background(), opt)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -66,7 +64,7 @@ func (s *Server) HandleAPIAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleAPIFriday(w http.ResponseWriter, r *http.Request) {
-	token, claims, ok := s.CheckAuthorization(r)
+	claims, ok := s.CheckAuthorization(r)
 	if !ok {
 		WriteAPIError(errors.New("not authorized"), http.StatusUnauthorized, w)
 		return
@@ -79,15 +77,15 @@ func (s *Server) HandleAPIFriday(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		s.HandleAPIGetFriday(token, claims, w, r)
+		s.HandleAPIGetFriday(claims, w, r)
 	case http.MethodPatch:
-		s.HandleAPIPatchFriday(token, claims, w, r)
+		s.HandleAPIPatchFriday(claims, w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
-func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleAPIGetFriday(accecssToken *AccessToken, w http.ResponseWriter, r *http.Request) {
 	fridays := make([]Friday, 0)
 	var err error
 	estZone, _ := time.LoadLocation("America/New_York")
@@ -132,7 +130,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 		}
 
 		// not part of invited group OR friday is disabled
-		if (f.Group != nil && !claims.InGroup(*f.Group)) || !f.Enabled {
+		if (f.Group != nil && !accecssToken.Claims.InGroup(*f.Group)) || !f.Enabled {
 			// if this friday was specifically requested, the response needs to be 404
 			if isDirectReq {
 				WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", fridayID), http.StatusNotFound, w)
@@ -176,7 +174,7 @@ func (s *Server) HandleAPIGetFriday(token *jwt.Token, claims *TokenClaims, w htt
 	}
 }
 
-func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleAPIPatchFriday(accecssToken *AccessToken, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != jsonapi.MediaType {
 		WriteAPIError(fmt.Errorf("unsupported media type '%s'", r.Header.Get("Content-Type")), http.StatusUnsupportedMediaType, w)
 		return
@@ -204,14 +202,14 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	friday.StartTime = f.Date
 
 	// not part of invited group OR friday not enabled
-	if (f.Group != nil && !claims.InGroup(*f.Group)) || !f.Enabled {
+	if (f.Group != nil && !accecssToken.Claims.InGroup(*f.Group)) || !f.Enabled {
 		WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", friday.ID), http.StatusNotFound, w)
 		return
 	}
 
 	// check the requested guests
 	for _, g := range friday.Guests {
-		if g.ID != claims.Email {
+		if g.ID != accecssToken.Claims.Email {
 			WriteAPIError(fmt.Errorf("not allowed to invite guest '%s'", g.ID), http.StatusUnauthorized, w)
 			return
 		}
@@ -233,9 +231,9 @@ func (s *Server) HandleAPIPatchFriday(token *jwt.Token, claims *TokenClaims, w h
 	}
 
 	// all good to update invite
-	slog.Info("rsvp request", "email", claims.Email)
+	slog.Info("rsvp request", "email", accecssToken.Claims.Email)
 
-	if err = s.CreateAndInvite(friday.ID, f, claims.Email, claims.Name); err != nil {
+	if err = s.CreateAndInvite(friday.ID, f, accecssToken.Claims.Email, accecssToken.Claims.Name); err != nil {
 		WriteAPIError(errors.New("calendar failure"), http.StatusInternalServerError, w)
 		return
 	}

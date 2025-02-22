@@ -31,7 +31,7 @@ type Server struct {
 	oauth2Provider *oidc.Provider
 	oauth2Conf     oauth2.Config
 	verifier       *oidc.IDTokenVerifier
-	keycloak       *Keycloak
+	authenticator  Authenticator
 
 	indexGetMetric      CounterMetric
 	submitPostMetric    CounterMetric
@@ -92,7 +92,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 		verifier: provider.Verifier(&oidc.Config{
 			ClientID: config.OAuth2.ClientID,
 		}),
-		keycloak: k,
+		authenticator: k,
 
 		indexGetMetric: metricsReg.NewCounterMetric("pizza_requests",
 			map[string]string{"method": "get", "path": "/"}),

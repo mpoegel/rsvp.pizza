@@ -2,11 +2,11 @@ package pizza
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
 	gocloak "github.com/Nerzal/gocloak/v13"
-	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 const (
@@ -26,14 +26,14 @@ type User struct {
 type Group struct {
 }
 
-type Keycloak struct {
+type KeycloakAuthenticator struct {
 	client *gocloak.GoCloak
 	config OAuth2Config
 	jwt    *gocloak.JWT
 }
 
-func NewKeycloak(config OAuth2Config) (*Keycloak, error) {
-	k := &Keycloak{
+func NewKeycloak(config OAuth2Config) (*KeycloakAuthenticator, error) {
+	k := &KeycloakAuthenticator{
 		client: gocloak.NewClient(config.KeycloakURL),
 		config: config,
 	}
@@ -58,12 +58,55 @@ func NewKeycloak(config OAuth2Config) (*Keycloak, error) {
 	return k, nil
 }
 
-func (k *Keycloak) GetToken(ctx context.Context, opt gocloak.TokenOptions) (*gocloak.JWT, error) {
-	opt.ClientID = &k.config.ClientID
-	opt.ClientSecret = &k.config.ClientSecret
-	return k.client.GetToken(ctx, k.config.Realm, opt)
+func (k *KeycloakAuthenticator) GetToken(ctx context.Context, opt AuthTokenOptions) (*JWT, error) {
+	tokOpt := gocloak.TokenOptions{
+		Username:     &opt.Username,
+		Password:     &opt.Password,
+		GrantType:    &opt.GrantType,
+		RefreshToken: &opt.RefreshToken,
+		ClientID:     &k.config.ClientID,
+		ClientSecret: &k.config.ClientSecret,
+	}
+	jwt, err := k.client.GetToken(ctx, k.config.Realm, tokOpt)
+	if err != nil {
+		return nil, err
+	}
+	return &JWT{
+		AccessToken:      jwt.AccessToken,
+		IDToken:          jwt.IDToken,
+		ExpiresIn:        jwt.ExpiresIn,
+		RefreshExpiresIn: jwt.RefreshExpiresIn,
+		RefreshToken:     jwt.RefreshToken,
+		TokenType:        jwt.TokenType,
+		NotBeforePolicy:  jwt.NotBeforePolicy,
+		SessionState:     jwt.SessionState,
+		Scope:            jwt.Scope,
+	}, nil
 }
 
-func (k *Keycloak) DecodeAccessToken(ctx context.Context, token string) (*jwt.Token, *jwt.MapClaims, error) {
-	return k.client.DecodeAccessToken(ctx, token, k.config.Realm)
+func (k *KeycloakAuthenticator) DecodeAccessToken(ctx context.Context, rawAccessToken string) (*AccessToken, error) {
+	token, claims, err := k.client.DecodeAccessToken(ctx, rawAccessToken, k.config.Realm)
+	if err != nil {
+		return nil, err
+	}
+	expTime, err := token.Claims.GetExpirationTime()
+	if err != nil {
+		return nil, err
+	}
+
+	jsonClaims, err := json.Marshal(claims)
+	if err != nil {
+		return nil, err
+	}
+	tokenClaims := &TokenClaims{}
+	if err = json.Unmarshal(jsonClaims, tokenClaims); err != nil {
+		return nil, err
+	}
+
+	return &AccessToken{
+		Claims:    *tokenClaims,
+		Signature: token.Signature,
+		Valid:     token.Valid,
+		ExpiresAt: expTime.Time,
+	}, nil
 }

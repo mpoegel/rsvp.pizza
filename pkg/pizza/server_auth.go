@@ -2,7 +2,6 @@ package pizza
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"path"
@@ -10,51 +9,8 @@ import (
 	"text/template"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt/v5"
 	uuid "github.com/google/uuid"
 )
-
-type TokenClaims struct {
-	Exp               int64    `json:"exp"`
-	Iat               int64    `json:"iat"`
-	AuthTime          int64    `json:"auth_time"`
-	Jti               string   `json:"jti"`
-	Iss               string   `json:"iss"`
-	Aud               string   `json:"aud"`
-	Sub               string   `json:"sub"`
-	Typ               string   `json:"typ"`
-	Azp               string   `json:"azp"`
-	SessionState      string   `json:"session_state"`
-	At_hash           string   `json:"at_hash"`
-	Acr               string   `json:"acr"`
-	Sid               string   `json:"sid"`
-	EmailVerified     bool     `json:"email_verified"`
-	Name              string   `json:"name"`
-	PreferredUsername string   `json:"preferred_username"`
-	GivenName         string   `json:"given_name"`
-	FamilyName        string   `json:"family_name"`
-	Email             string   `json:"email"`
-	Groups            []string `json:"groups"`
-	Roles             []string `json:"roles"`
-}
-
-func (c *TokenClaims) HasRole(role string) bool {
-	for _, r := range c.Roles {
-		if r == role {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *TokenClaims) InGroup(group string) bool {
-	for _, g := range c.Groups {
-		if g == group {
-			return true
-		}
-	}
-	return false
-}
 
 func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
 	var claims *TokenClaims
@@ -76,43 +32,30 @@ func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
 	return claims, true
 }
 
-func (s *Server) CheckAuthorization(r *http.Request) (*jwt.Token, *TokenClaims, bool) {
+func (s *Server) CheckAuthorization(r *http.Request) (*AccessToken, bool) {
 	// check the authorization header for the access token
 	rawAccessToken := r.Header.Get("Authorization")
 	if rawAccessToken == "" {
-		return nil, nil, false
+		return nil, false
 	}
 
 	authParts := strings.Split(rawAccessToken, " ")
 	if len(authParts) != 2 {
-		return nil, nil, false
+		return nil, false
 	}
 
 	// decode the access token
-	token, claims, err := s.keycloak.DecodeAccessToken(r.Context(), authParts[1])
+	accessToken, err := s.authenticator.DecodeAccessToken(r.Context(), authParts[1])
 	if err != nil {
-		return nil, nil, false
+		return nil, false
 	}
 
 	// check token expiration
-	expTime, err := token.Claims.GetExpirationTime()
-	if err != nil {
-		return nil, nil, false
-	}
-	if expTime.Before(time.Now()) {
-		return nil, nil, false
+	if accessToken.ExpiresAt.Before(time.Now()) {
+		return nil, false
 	}
 
-	jsonClaims, err := json.Marshal(claims)
-	if err != nil {
-		return nil, nil, false
-	}
-	tokenClaims := &TokenClaims{}
-	if err = json.Unmarshal(jsonClaims, tokenClaims); err != nil {
-		return nil, nil, false
-	}
-
-	return token, tokenClaims, true
+	return accessToken, true
 }
 
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
