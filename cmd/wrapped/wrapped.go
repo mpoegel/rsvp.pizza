@@ -31,12 +31,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	cal := pizza.NewCalendar(googleCal)
 	start := time.Time{}
 	start = start.AddDate(*year, 1, 1)
 	end := time.Time{}
 	end = end.AddDate(*year, 12, 31)
-	events, err := cal.ListEventsBetween(start, end, 100)
+	events, err := googleCal.ListEventsBetween(start, end, 100)
 	if err != nil {
 		slog.Error("could not get events", "err", err)
 		os.Exit(1)

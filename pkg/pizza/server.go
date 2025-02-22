@@ -25,7 +25,7 @@ type WrappedData struct {
 type Server struct {
 	s        http.Server
 	store    Accessor
-	calendar *Calendar
+	calendar Calendar
 	config   Config
 
 	oauth2Provider *oidc.Provider
@@ -78,7 +78,7 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 			Handler:      r,
 		},
 		store:    accessor,
-		calendar: NewCalendar(googleCal),
+		calendar: googleCal,
 		config:   config,
 
 		oauth2Provider: provider,
