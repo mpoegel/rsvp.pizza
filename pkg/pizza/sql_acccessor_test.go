@@ -14,7 +14,8 @@ func TestSqlAccessor_GetFriendName(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
+	defer os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, true)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -39,7 +40,8 @@ func TestSqlAccessor_GetUpcomingFridays(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
+	defer os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, true)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -55,15 +57,16 @@ func TestSqlAccessor_GetUpcomingFridays(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, fridays)
 	require.Equal(t, 2, len(fridays))
-	assert.Equal(t, friday1, fridays[0])
-	assert.Equal(t, friday2, fridays[1])
+	assert.Equal(t, friday1, fridays[0].Date)
+	assert.Equal(t, friday2, fridays[1].Date)
 }
 
 func TestSqlAccessor_ListFridays(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
+	defer os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, true)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())
@@ -88,7 +91,8 @@ func TestSqlAccessor_RemoveFriday(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
-	accessor, err := pizza.NewSQLAccessor(sqlfile, false)
+	defer os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, true)
 	require.Nil(t, err)
 	defer accessor.Close()
 	require.Nil(t, accessor.CreateTables())

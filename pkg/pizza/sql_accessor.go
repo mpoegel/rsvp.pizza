@@ -29,19 +29,40 @@ func (a *SQLAccessor) Close() {
 }
 
 func (a *SQLAccessor) CreateTables() error {
-	stmt := "CREATE TABLE friends (email text NOT NULL PRIMARY KEY, name text)"
+	stmt := `CREATE TABLE friends (
+		email       text NOT NULL PRIMARY KEY,
+		name        text,
+		preferences text default "{}"
+	)`
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	stmt = "CREATE TABLE fridays (start_time datetime NOT NULL PRIMARY KEY)"
+	stmt = `CREATE TABLE fridays (
+		start_time    datetime NOT NULL PRIMARY KEY,
+		invited_group text,
+		details       text,
+		invited       text default "[]",
+		max_guests    int default 10,
+		enabled       bool default true
+	)`
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	stmt = "CREATE TABLE versions (name text NOT NULL PRIMARY KEY, version int NOT NULL)"
+	stmt = `CREATE TABLE versions (
+		name    text NOT NULL PRIMARY KEY,
+		version int NOT NULL
+	)`
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	_, err := a.db.Exec(`INSERT INTO app_versions (name, version) VALUES ('schema', 2)`)
+	stmt = `CREATE TABLE app_versions (
+		name    text NOT NULL PRIMARY KEY,
+		version int NOT NULL
+	)`
+	if _, err := a.db.Exec(stmt); err != nil {
+		return err
+	}
+	_, err := a.db.Exec(`INSERT INTO app_versions (name, version) VALUES ('schema', 5)`)
 	return err
 }
 
