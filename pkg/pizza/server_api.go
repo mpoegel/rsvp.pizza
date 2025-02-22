@@ -12,7 +12,7 @@ import (
 
 	gocloak "github.com/Nerzal/gocloak/v13"
 	jwt "github.com/golang-jwt/jwt/v5"
-	jsonapi "github.com/google/jsonapi"
+	jsonapi "github.com/hashicorp/jsonapi"
 	api "github.com/mpoegel/rsvp.pizza/pkg/api"
 )
 

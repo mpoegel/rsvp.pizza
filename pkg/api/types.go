@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	jsonapi "github.com/google/jsonapi"
+	jsonapi "github.com/hashicorp/jsonapi"
 )
 
 type Friday struct {

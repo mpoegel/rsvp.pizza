@@ -6,8 +6,8 @@ require (
 	github.com/Nerzal/gocloak/v13 v13.9.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/google/jsonapi v1.0.0
 	github.com/google/uuid v1.6.0
+	github.com/hashicorp/jsonapi v1.4.2
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.10.0
