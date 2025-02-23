@@ -1,20 +1,39 @@
 package pizza
 
 import (
+	"context"
 	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
 )
 
-func Run(args []string) {
+func Run(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	fs.Parse(args)
 	slog.SetLogLoggerLevel(slog.LevelDebug)
+	ctx := context.Background()
 
 	config := LoadConfigEnv()
+	slog.Info("using the sqlite accessor")
+	accessor, err := NewSQLAccessor(config.DBFile, false)
+	if err != nil {
+		return err
+	}
+
+	googleCal, err := NewGoogleCalendar(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, ctx)
+	if err != nil {
+		return err
+	}
+
+	keycloak, err := NewKeycloak(ctx, config.OAuth2)
+	if err != nil {
+		slog.Error("keycloak failure", "error", err)
+		return err
+	}
+
 	metricsReg := NewPrometheusRegistry()
-	server, err := NewServer(config, metricsReg)
+	server, err := NewServer(config, accessor, googleCal, keycloak, metricsReg)
 	if err != nil {
 		slog.Error("could not create server", "error", err)
 		os.Exit(1)
@@ -32,5 +51,5 @@ func Run(args []string) {
 		go metricsReg.Serve(config.MetricsPort)
 	}
 
-	server.Start()
+	return server.Start()
 }

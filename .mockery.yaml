@@ -1,0 +1,13 @@
+with-expecter: true
+packages:
+  github.com/mpoegel/rsvp.pizza/pkg/pizza:
+    # package-specific config
+    config:
+      resolve-type-alias: false
+      issue-845-fix: true
+      inpackage: true
+      dir: pkg/pizza
+    interfaces:
+      Accessor: {}
+      Authenticator: {}
+      Calendar: {}

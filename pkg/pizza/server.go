@@ -36,28 +36,8 @@ type Server struct {
 	sessions map[string]*TokenClaims
 }
 
-func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
+func NewServer(config Config, accessor Accessor, calendar Calendar, auth Authenticator, metricsReg MetricsRegistry) (*Server, error) {
 	r := http.NewServeMux()
-
-	var accessor Accessor
-	var err error
-	slog.Info("using the sqlite accessor")
-	accessor, err = NewSQLAccessor(config.DBFile, false)
-	if err != nil {
-		return nil, err
-	}
-
-	googleCal, err := NewGoogleCalendar(config.Calendar.CredentialFile, config.Calendar.TokenFile, config.Calendar.ID, context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	ctx := context.Background()
-	k, err := NewKeycloak(ctx, config.OAuth2)
-	if err != nil {
-		slog.Error("keycloak failure", "error", err)
-		return nil, err
-	}
 
 	s := Server{
 		s: http.Server{
@@ -68,8 +48,8 @@ func NewServer(config Config, metricsReg MetricsRegistry) (*Server, error) {
 		},
 		config:        config,
 		store:         accessor,
-		calendar:      googleCal,
-		authenticator: k,
+		calendar:      calendar,
+		authenticator: auth,
 
 		indexGetMetric: metricsReg.NewCounterMetric("pizza_requests",
 			map[string]string{"method": "get", "path": "/"}),
