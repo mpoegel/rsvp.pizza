@@ -1,38 +1,68 @@
 package pizza_test
 
-// func TestHandleIndex(t *testing.T) {
-// 	// GIVEN
-// 	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
-// 	require.Nil(t, err)
-// 	server, err := pizza.NewServer(config, nil)
-// 	require.Nil(t, err)
-// 	ts := httptest.NewServer(http.HandlerFunc(server.HandleIndex))
-// 	defer ts.Close()
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-// 	// WHEN
-// 	res, err := http.Get(ts.URL)
+	pizza "github.com/mpoegel/rsvp.pizza/pkg/pizza"
+	assert "github.com/stretchr/testify/assert"
+	mock "github.com/stretchr/testify/mock"
+	require "github.com/stretchr/testify/require"
+)
 
-// 	// THEN
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, http.StatusOK, res.StatusCode)
-// 	assert.NotNil(t, res)
-// }
+func TestHandleIndex(t *testing.T) {
+	// GIVEN
+	config := pizza.LoadConfigEnv()
+	config.StaticDir = "../../static"
+	accessor := &pizza.MockAccessor{}
+	calendar := &pizza.MockCalendar{}
+	authenticator := &pizza.MockAuthenticator{}
+	metrics := &pizza.MockMetricsRegistry{}
+	counter := &pizza.MockCounterMetric{}
 
-// func TestHandleSubmit(t *testing.T) {
-// 	// GIVEN
-// 	config, err := pizza.LoadConfig("../../configs/pizza.yaml")
-// 	require.Nil(t, err)
-// 	server, err := pizza.NewServer(config, nil)
-// 	require.Nil(t, err)
-// 	ts := httptest.NewServer(http.HandlerFunc(server.HandleSubmit))
-// 	defer ts.Close()
-// 	url := fmt.Sprintf("%s?date=1672060005&date=1672040005&email=popfizz@foo.com", ts.URL)
+	metrics.On("NewCounterMetric", mock.Anything, mock.Anything).Return(counter)
+	counter.On("Increment").Return()
 
-// 	// WHEN
-// 	res, err := http.Post(url, "", nil)
+	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
+	require.Nil(t, err)
+	ts := httptest.NewServer(http.HandlerFunc(server.HandleIndex))
+	defer ts.Close()
 
-// 	// THEN
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, http.StatusOK, res.StatusCode)
-// 	assert.NotNil(t, res)
-// }
+	// WHEN
+	res, err := http.Get(ts.URL)
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.NotNil(t, res)
+}
+
+func TestHandleSubmit(t *testing.T) {
+	// GIVEN
+	config := pizza.LoadConfigEnv()
+	config.StaticDir = "../../static"
+	accessor := &pizza.MockAccessor{}
+	calendar := &pizza.MockCalendar{}
+	authenticator := &pizza.MockAuthenticator{}
+	metrics := &pizza.MockMetricsRegistry{}
+	counter := &pizza.MockCounterMetric{}
+
+	metrics.On("NewCounterMetric", mock.Anything, mock.Anything).Return(counter)
+	counter.On("Increment").Return()
+
+	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
+	require.Nil(t, err)
+	ts := httptest.NewServer(http.HandlerFunc(server.HandleRSVP))
+	defer ts.Close()
+	url := fmt.Sprintf("%s?date=1672060005&date=1672040005&email=popfizz@foo.com", ts.URL)
+
+	// WHEN
+	res, err := http.Post(url, "", nil)
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.NotNil(t, res)
+}

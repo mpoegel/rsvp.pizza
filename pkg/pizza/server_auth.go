@@ -68,7 +68,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	authParts := strings.Split(rawAccessToken, " ")
 	if len(authParts) != 2 {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
