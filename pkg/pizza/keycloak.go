@@ -8,7 +8,7 @@ import (
 
 	gocloak "github.com/Nerzal/gocloak/v13"
 	oidc "github.com/coreos/go-oidc"
-	"golang.org/x/oauth2"
+	oauth2 "golang.org/x/oauth2"
 )
 
 const (
@@ -34,6 +34,7 @@ type KeycloakAuthenticator struct {
 	realm      string
 	verifier   *oidc.IDTokenVerifier
 	jwt        *gocloak.JWT
+	sessions   map[string]*TokenClaims
 }
 
 func NewKeycloak(ctx context.Context, config OAuth2Config) (*KeycloakAuthenticator, error) {
@@ -54,6 +55,7 @@ func NewKeycloak(ctx context.Context, config OAuth2Config) (*KeycloakAuthenticat
 		verifier: provider.Verifier(&oidc.Config{
 			ClientID: config.ClientID,
 		}),
+		sessions: make(map[string]*TokenClaims),
 	}
 	jwt, err := k.client.LoginClient(ctx, config.ClientID, config.ClientSecret, config.Realm)
 	if err != nil {
@@ -129,10 +131,11 @@ func (k *KeycloakAuthenticator) DecodeAccessToken(ctx context.Context, rawAccess
 }
 
 func (k *KeycloakAuthenticator) GetAuthCodeURL(ctx context.Context, state string) string {
+	k.sessions[state] = nil
 	return k.oauth2Conf.AuthCodeURL(state)
 }
 
-func (k *KeycloakAuthenticator) ExchangeCodeForToken(ctx context.Context, code string) (*IDToken, error) {
+func (k *KeycloakAuthenticator) ExchangeCodeForToken(ctx context.Context, state, code string) (*IDToken, error) {
 	oauth2Token, err := k.oauth2Conf.Exchange(ctx, code)
 	if err != nil {
 		slog.Warn("failed to exchange code for token", "error", err)
@@ -145,7 +148,12 @@ func (k *KeycloakAuthenticator) ExchangeCodeForToken(ctx context.Context, code s
 		return nil, err
 	}
 
-	return k.VerifyToken(ctx, rawIDToken)
+	token, err := k.VerifyToken(ctx, rawIDToken)
+	if err != nil {
+		return nil, err
+	}
+	k.sessions[state] = &token.Claims
+	return token, nil
 }
 
 func (k *KeycloakAuthenticator) VerifyToken(ctx context.Context, rawToken string) (*IDToken, error) {
@@ -173,4 +181,18 @@ func (k *KeycloakAuthenticator) VerifyToken(ctx context.Context, rawToken string
 
 func (k *KeycloakAuthenticator) GetAuthURL() string {
 	return k.oauth2Conf.Endpoint.AuthURL
+}
+
+func (k *KeycloakAuthenticator) IsValidSession(session string) (*TokenClaims, bool) {
+	claims, ok := k.sessions[session]
+	if ok && claims == nil {
+		// pending completed login
+		return nil, true
+	}
+	// either bad session or auth has expired
+	if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
+		delete(k.sessions, session)
+		return nil, false
+	}
+	return claims, true
 }

@@ -13,22 +13,14 @@ import (
 
 func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
 	var claims *TokenClaims
+	var ok bool
 	for _, cookie := range r.Cookies() {
 		if cookie.Name == "session" {
-			var ok bool
-			claims, ok = s.sessions[cookie.Value]
-			// either bad session or auth has expired
-			if !ok || time.Now().After(time.Unix(claims.Exp, 0)) {
-				delete(s.sessions, cookie.Value)
-				return nil, false
-			}
+			claims, ok = s.authenticator.IsValidSession(cookie.Value)
+			break
 		}
 	}
-	if claims == nil {
-		return nil, false
-	}
-
-	return claims, true
+	return claims, ok
 }
 
 func (s *Server) CheckAuthorization(r *http.Request) (*AccessToken, bool) {
@@ -61,7 +53,6 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	state := uuid.New()
 	rawAccessToken := r.Header.Get("Authorization")
 	if rawAccessToken == "" {
-		s.sessions[state.String()] = nil
 		http.Redirect(w, r, s.authenticator.GetAuthCodeURL(r.Context(), state.String()), http.StatusFound)
 		return
 	}
@@ -74,7 +65,6 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	_, err := s.authenticator.VerifyToken(r.Context(), authParts[1])
 	if err != nil {
-		s.sessions[state.String()] = nil
 		http.Redirect(w, r, s.authenticator.GetAuthCodeURL(r.Context(), state.String()), http.StatusFound)
 		return
 	}
@@ -85,13 +75,13 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
-	if _, ok := s.sessions[state]; !ok {
+	if _, ok := s.authenticator.IsValidSession(state); !ok {
 		slog.Warn("state did not match")
 		http.Error(w, "state did not match", http.StatusBadRequest)
 		return
 	}
 
-	idToken, err := s.authenticator.ExchangeCodeForToken(r.Context(), r.URL.Query().Get("code"))
+	idToken, err := s.authenticator.ExchangeCodeForToken(r.Context(), state, r.URL.Query().Get("code"))
 	if err != nil {
 		slog.Warn("failed to exchange code for token", "error", err)
 		http.Error(w, "auth error", http.StatusInternalServerError)
@@ -115,17 +105,10 @@ func (s *Server) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 	r.AddCookie(cookie)
 
-	s.sessions[state] = &idToken.Claims
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == "session" {
-			delete(s.sessions, cookie.Value)
-		}
-	}
-
 	plate, err := template.ParseFiles(path.Join(s.config.StaticDir, "html/logout.html"))
 	if err != nil {
 		slog.Error("template submit failure", "error", err)

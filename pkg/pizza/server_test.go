@@ -27,7 +27,9 @@ func TestHandleIndex(t *testing.T) {
 
 	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
 	require.Nil(t, err)
-	ts := httptest.NewServer(http.HandlerFunc(server.HandleIndex))
+	mux := http.NewServeMux()
+	server.LoadRoutes(mux)
+	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
 	// WHEN
@@ -54,9 +56,11 @@ func TestHandleSubmit(t *testing.T) {
 
 	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
 	require.Nil(t, err)
-	ts := httptest.NewServer(http.HandlerFunc(server.HandleRSVP))
+	mux := http.NewServeMux()
+	server.LoadRoutes(mux)
+	ts := httptest.NewServer(mux)
 	defer ts.Close()
-	url := fmt.Sprintf("%s?date=1672060005&date=1672040005&email=popfizz@foo.com", ts.URL)
+	url := fmt.Sprintf("%s/rsvp?date=1672060005&date=1672040005&email=popfizz@foo.com", ts.URL)
 
 	// WHEN
 	res, err := http.Post(url, "", nil)

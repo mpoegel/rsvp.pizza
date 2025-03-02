@@ -26,6 +26,7 @@ func TestHandleLogin(t *testing.T) {
 	metrics.On("NewCounterMetric", mock.Anything, mock.Anything).Return(counter)
 	counter.On("Increment").Return()
 
+	authenticator.On("IsValidSession", "foo").Return(nil, true)
 	authenticator.On("VerifyToken", mock.Anything, "faketoken").Return(&pizza.IDToken{}, nil)
 	authenticator.On("VerifyToken", mock.Anything, "badtoken").Return(nil, errors.New("bad token"))
 	authenticator.On("GetAuthCodeURL", mock.Anything, mock.Anything).Return("/auth?state=foo")
@@ -38,14 +39,16 @@ func TestHandleLogin(t *testing.T) {
 	}
 	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
 	require.Nil(t, err)
-	ts := httptest.NewServer(http.HandlerFunc(server.HandleLogin))
+	mux := http.NewServeMux()
+	server.LoadRoutes(mux)
+	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
 	// ---
 	// Request has valid token
 	// ---
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/login", nil)
 	require.Nil(t, err)
 	req.Header.Add("Authorization", "Bearer faketoken")
 
@@ -60,7 +63,7 @@ func TestHandleLogin(t *testing.T) {
 	// Request is missing token
 	// ---
 
-	req, err = http.NewRequest(http.MethodGet, ts.URL, nil)
+	req, err = http.NewRequest(http.MethodGet, ts.URL+"/login", nil)
 	require.Nil(t, err)
 
 	// WHEN
@@ -77,7 +80,7 @@ func TestHandleLogin(t *testing.T) {
 	// Request has invalid token
 	// ---
 
-	req, err = http.NewRequest(http.MethodGet, ts.URL, nil)
+	req, err = http.NewRequest(http.MethodGet, ts.URL+"/login", nil)
 	require.Nil(t, err)
 	req.Header.Add("Authorization", "Bearer badtoken")
 
@@ -111,7 +114,9 @@ func TestHandleLoginCallback(t *testing.T) {
 			state = args[1].(string)
 		}).
 		Return("/auth?state=foo")
-	authenticator.On("ExchangeCodeForToken", mock.Anything, "bar").Return(&pizza.IDToken{}, nil)
+	authenticator.On("ExchangeCodeForToken", mock.Anything, mock.Anything, "bar").Return(&pizza.IDToken{}, nil)
+	authenticator.On("IsValidSession", "foobar").Times(1).Return(nil, false)
+	authenticator.On("IsValidSession", mock.Anything).Return(nil, true)
 
 	client := http.Client{
 		// Disable redirects
@@ -123,8 +128,7 @@ func TestHandleLoginCallback(t *testing.T) {
 	require.Nil(t, err)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /login", server.HandleLogin)
-	mux.HandleFunc("GET /login/callback", server.HandleLoginCallback)
+	server.LoadRoutes(mux)
 
 	ts := httptest.NewServer(mux)
 	defer ts.Close()

@@ -80,9 +80,9 @@ func (_c *MockAuthenticator_DecodeAccessToken_Call) RunAndReturn(run func(contex
 	return _c
 }
 
-// ExchangeCodeForToken provides a mock function with given fields: ctx, code
-func (_m *MockAuthenticator) ExchangeCodeForToken(ctx context.Context, code string) (*IDToken, error) {
-	ret := _m.Called(ctx, code)
+// ExchangeCodeForToken provides a mock function with given fields: ctx, state, code
+func (_m *MockAuthenticator) ExchangeCodeForToken(ctx context.Context, state string, code string) (*IDToken, error) {
+	ret := _m.Called(ctx, state, code)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ExchangeCodeForToken")
@@ -90,19 +90,19 @@ func (_m *MockAuthenticator) ExchangeCodeForToken(ctx context.Context, code stri
 
 	var r0 *IDToken
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*IDToken, error)); ok {
-		return rf(ctx, code)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*IDToken, error)); ok {
+		return rf(ctx, state, code)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *IDToken); ok {
-		r0 = rf(ctx, code)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *IDToken); ok {
+		r0 = rf(ctx, state, code)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*IDToken)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, code)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, state, code)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,14 +117,15 @@ type MockAuthenticator_ExchangeCodeForToken_Call struct {
 
 // ExchangeCodeForToken is a helper method to define mock.On call
 //   - ctx context.Context
+//   - state string
 //   - code string
-func (_e *MockAuthenticator_Expecter) ExchangeCodeForToken(ctx interface{}, code interface{}) *MockAuthenticator_ExchangeCodeForToken_Call {
-	return &MockAuthenticator_ExchangeCodeForToken_Call{Call: _e.mock.On("ExchangeCodeForToken", ctx, code)}
+func (_e *MockAuthenticator_Expecter) ExchangeCodeForToken(ctx interface{}, state interface{}, code interface{}) *MockAuthenticator_ExchangeCodeForToken_Call {
+	return &MockAuthenticator_ExchangeCodeForToken_Call{Call: _e.mock.On("ExchangeCodeForToken", ctx, state, code)}
 }
 
-func (_c *MockAuthenticator_ExchangeCodeForToken_Call) Run(run func(ctx context.Context, code string)) *MockAuthenticator_ExchangeCodeForToken_Call {
+func (_c *MockAuthenticator_ExchangeCodeForToken_Call) Run(run func(ctx context.Context, state string, code string)) *MockAuthenticator_ExchangeCodeForToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
 	})
 	return _c
 }
@@ -134,7 +135,7 @@ func (_c *MockAuthenticator_ExchangeCodeForToken_Call) Return(_a0 *IDToken, _a1 
 	return _c
 }
 
-func (_c *MockAuthenticator_ExchangeCodeForToken_Call) RunAndReturn(run func(context.Context, string) (*IDToken, error)) *MockAuthenticator_ExchangeCodeForToken_Call {
+func (_c *MockAuthenticator_ExchangeCodeForToken_Call) RunAndReturn(run func(context.Context, string, string) (*IDToken, error)) *MockAuthenticator_ExchangeCodeForToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -286,6 +287,64 @@ func (_c *MockAuthenticator_GetToken_Call) Return(_a0 *JWT, _a1 error) *MockAuth
 }
 
 func (_c *MockAuthenticator_GetToken_Call) RunAndReturn(run func(context.Context, AuthTokenOptions) (*JWT, error)) *MockAuthenticator_GetToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsValidSession provides a mock function with given fields: session
+func (_m *MockAuthenticator) IsValidSession(session string) (*TokenClaims, bool) {
+	ret := _m.Called(session)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsValidSession")
+	}
+
+	var r0 *TokenClaims
+	var r1 bool
+	if rf, ok := ret.Get(0).(func(string) (*TokenClaims, bool)); ok {
+		return rf(session)
+	}
+	if rf, ok := ret.Get(0).(func(string) *TokenClaims); ok {
+		r0 = rf(session)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*TokenClaims)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) bool); ok {
+		r1 = rf(session)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+
+	return r0, r1
+}
+
+// MockAuthenticator_IsValidSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsValidSession'
+type MockAuthenticator_IsValidSession_Call struct {
+	*mock.Call
+}
+
+// IsValidSession is a helper method to define mock.On call
+//   - session string
+func (_e *MockAuthenticator_Expecter) IsValidSession(session interface{}) *MockAuthenticator_IsValidSession_Call {
+	return &MockAuthenticator_IsValidSession_Call{Call: _e.mock.On("IsValidSession", session)}
+}
+
+func (_c *MockAuthenticator_IsValidSession_Call) Run(run func(session string)) *MockAuthenticator_IsValidSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockAuthenticator_IsValidSession_Call) Return(_a0 *TokenClaims, _a1 bool) *MockAuthenticator_IsValidSession_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAuthenticator_IsValidSession_Call) RunAndReturn(run func(string) (*TokenClaims, bool)) *MockAuthenticator_IsValidSession_Call {
 	_c.Call.Return(run)
 	return _c
 }

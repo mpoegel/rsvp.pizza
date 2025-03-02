@@ -10,10 +10,12 @@ type Authenticator interface {
 	DecodeAccessToken(ctx context.Context, rawAccessToken string) (*AccessToken, error)
 
 	GetAuthCodeURL(ctx context.Context, state string) string
-	ExchangeCodeForToken(ctx context.Context, code string) (*IDToken, error)
+	ExchangeCodeForToken(ctx context.Context, state, code string) (*IDToken, error)
 	VerifyToken(ctx context.Context, rawToken string) (*IDToken, error)
 
 	GetAuthURL() string
+
+	IsValidSession(session string) (*TokenClaims, bool)
 }
 
 type AuthTokenOptions struct {

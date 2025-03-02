@@ -32,19 +32,18 @@ type Server struct {
 	requestErrorMetric  CounterMetric
 	internalErrorMetric CounterMetric
 
-	wrapped  map[int]WrappedData
-	sessions map[string]*TokenClaims
+	wrapped map[int]WrappedData
 }
 
 func NewServer(config Config, accessor Accessor, calendar Calendar, auth Authenticator, metricsReg MetricsRegistry) (*Server, error) {
-	r := http.NewServeMux()
+	mux := http.NewServeMux()
 
 	s := Server{
 		s: http.Server{
 			Addr:         fmt.Sprintf("0.0.0.0:%d", config.Port),
 			ReadTimeout:  config.ReadTimeout,
 			WriteTimeout: config.WriteTimeout,
-			Handler:      r,
+			Handler:      mux,
 		},
 		config:        config,
 		store:         accessor,
@@ -62,31 +61,34 @@ func NewServer(config Config, accessor Accessor, calendar Calendar, auth Authent
 		internalErrorMetric: metricsReg.NewCounterMetric("pizza_errors",
 			map[string]string{"statusCode": "500"}),
 
-		wrapped:  map[int]WrappedData{},
-		sessions: map[string]*TokenClaims{},
+		wrapped: map[int]WrappedData{},
 	}
 
-	r.HandleFunc("GET /", s.HandleIndex)
-	r.HandleFunc("POST /rsvp", s.HandleRSVP)
-	r.HandleFunc("GET /wrapped", s.HandledWrapped)
-	r.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(config.StaticDir))))
-	r.HandleFunc("GET /login", s.HandleLogin)
-	r.HandleFunc("GET /login/callback", s.HandleLoginCallback)
-	r.HandleFunc("GET /logout", s.HandleLogout)
-	r.HandleFunc("GET /admin", s.HandleAdmin)
-	r.HandleFunc("POST /admin/edit", s.HandleAdminEdit)
-
-	r.HandleFunc("GET /profile", s.HandleGetProfile)
-	r.HandleFunc("POST /profile/edit", s.HandleUpdateProfile)
-
-	r.HandleFunc("POST /api/token", s.HandleAPIAuth)
-	r.HandleFunc("GET /api/friday", s.HandleAPIFriday)
-	r.HandleFunc("GET /api/friday/{ID}", s.HandleAPIFriday)
-	r.HandleFunc("PATCH /api/friday/{ID}", s.HandleAPIFriday)
-
-	r.HandleFunc("GET /p/{ID}", s.HandlePizza)
+	s.LoadRoutes(mux)
 
 	return &s, nil
+}
+
+func (s *Server) LoadRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /", s.HandleIndex)
+	mux.HandleFunc("POST /rsvp", s.HandleRSVP)
+	mux.HandleFunc("GET /wrapped", s.HandledWrapped)
+	mux.HandleFunc("GET /login", s.HandleLogin)
+	mux.HandleFunc("GET /login/callback", s.HandleLoginCallback)
+	mux.HandleFunc("GET /logout", s.HandleLogout)
+	mux.HandleFunc("GET /admin", s.HandleAdmin)
+	mux.HandleFunc("POST /admin/edit", s.HandleAdminEdit)
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(s.config.StaticDir))))
+
+	mux.HandleFunc("GET /profile", s.HandleGetProfile)
+	mux.HandleFunc("POST /profile/edit", s.HandleUpdateProfile)
+
+	mux.HandleFunc("POST /api/token", s.HandleAPIAuth)
+	mux.HandleFunc("GET /api/friday", s.HandleAPIFriday)
+	mux.HandleFunc("GET /api/friday/{ID}", s.HandleAPIFriday)
+	mux.HandleFunc("PATCH /api/friday/{ID}", s.HandleAPIFriday)
+
+	mux.HandleFunc("GET /p/{ID}", s.HandlePizza)
 }
 
 func (s *Server) Start() error {
