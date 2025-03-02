@@ -2,6 +2,7 @@ package pizza
 
 import (
 	"context"
+	"slices"
 	"time"
 )
 
@@ -69,21 +70,11 @@ type TokenClaims struct {
 }
 
 func (c *TokenClaims) HasRole(role string) bool {
-	for _, r := range c.Roles {
-		if r == role {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.Roles, role)
 }
 
 func (c *TokenClaims) InGroup(group string) bool {
-	for _, g := range c.Groups {
-		if g == group {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.Groups, group)
 }
 
 type IDToken struct {

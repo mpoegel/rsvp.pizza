@@ -12,15 +12,11 @@ import (
 )
 
 func (s *Server) authenticateRequest(r *http.Request) (*TokenClaims, bool) {
-	var claims *TokenClaims
-	var ok bool
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == "session" {
-			claims, ok = s.authenticator.IsValidSession(cookie.Value)
-			break
-		}
+	if cookie, err := r.Cookie("session"); err != nil {
+		return nil, false
+	} else {
+		return s.authenticator.IsValidSession(cookie.Value)
 	}
-	return claims, ok
 }
 
 func (s *Server) CheckAuthorization(r *http.Request) (*AccessToken, bool) {
