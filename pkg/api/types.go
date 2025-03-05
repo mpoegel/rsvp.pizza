@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"io"
+	"reflect"
 	"time"
 
 	jsonapi "github.com/hashicorp/jsonapi"
@@ -24,4 +26,24 @@ type Guest struct {
 	ID    string `jsonapi:"primary,guest"`
 	Email string `jsonapi:"attr,email"`
 	Name  string `jsonapi:"attr,name,omitempty"`
+}
+
+func UnmarshalFriday(r io.Reader) (*Friday, error) {
+	friday := &Friday{}
+	if err := jsonapi.UnmarshalPayload(r, friday); err != nil {
+		return nil, err
+	}
+	return friday, nil
+}
+
+func UnmarshalFridays(r io.Reader) ([]*Friday, error) {
+	payload, err := jsonapi.UnmarshalManyPayload(r, reflect.TypeOf(new(Friday)))
+	if err != nil {
+		return nil, err
+	}
+	fridays := make([]*Friday, len(payload))
+	for i, f := range payload {
+		fridays[i] = f.(*Friday)
+	}
+	return fridays, nil
 }

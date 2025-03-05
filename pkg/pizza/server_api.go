@@ -85,7 +85,7 @@ func (s *Server) HandleAPIFriday(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) HandleAPIGetFriday(accecssToken *AccessToken, w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleAPIGetFriday(accessToken *AccessToken, w http.ResponseWriter, r *http.Request) {
 	fridays := make([]Friday, 0)
 	var err error
 	estZone, _ := time.LoadLocation("America/New_York")
@@ -130,7 +130,7 @@ func (s *Server) HandleAPIGetFriday(accecssToken *AccessToken, w http.ResponseWr
 		}
 
 		// not part of invited group OR friday is disabled
-		if (f.Group != nil && !accecssToken.Claims.InGroup(*f.Group)) || !f.Enabled {
+		if (f.Group != nil && !accessToken.Claims.InGroup(*f.Group)) || !f.Enabled {
 			// if this friday was specifically requested, the response needs to be 404
 			if isDirectReq {
 				WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", fridayID), http.StatusNotFound, w)
@@ -174,7 +174,7 @@ func (s *Server) HandleAPIGetFriday(accecssToken *AccessToken, w http.ResponseWr
 	}
 }
 
-func (s *Server) HandleAPIPatchFriday(accecssToken *AccessToken, w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != jsonapi.MediaType {
 		WriteAPIError(fmt.Errorf("unsupported media type '%s'", r.Header.Get("Content-Type")), http.StatusUnsupportedMediaType, w)
 		return
@@ -202,20 +202,21 @@ func (s *Server) HandleAPIPatchFriday(accecssToken *AccessToken, w http.Response
 	friday.StartTime = f.Date
 
 	// not part of invited group OR friday not enabled
-	if (f.Group != nil && !accecssToken.Claims.InGroup(*f.Group)) || !f.Enabled {
+	if (f.Group != nil && !accessToken.Claims.InGroup(*f.Group)) || !f.Enabled {
 		WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", friday.ID), http.StatusNotFound, w)
 		return
 	}
 
 	// check the requested guests
 	for _, g := range friday.Guests {
-		if g.ID != accecssToken.Claims.Email {
+		if g.ID != accessToken.Claims.Email {
 			WriteAPIError(fmt.Errorf("not allowed to invite guest '%s'", g.ID), http.StatusUnauthorized, w)
 			return
 		}
 	}
 
 	if friday.StartTime.Before(time.Now()) {
+		// TODO inappropriate usage of StatusNotModified
 		WriteAPIError(errors.New("friday is in the past"), http.StatusNotModified, w)
 		return
 	}
@@ -226,18 +227,20 @@ func (s *Server) HandleAPIPatchFriday(accecssToken *AccessToken, w http.Response
 	}
 
 	if friday.StartTime.Before(time.Now().Add(time.Hour * 24)) {
+		// TODO inappropriate usage of StatusNotModified
 		WriteAPIError(errors.New("modifications cannot be made less than 24 hours before the friday"), http.StatusNotModified, w)
 		return
 	}
 
 	// all good to update invite
-	slog.Info("rsvp request", "email", accecssToken.Claims.Email)
+	slog.Info("rsvp request", "email", accessToken.Claims.Email)
 
-	if err = s.CreateAndInvite(friday.ID, f, accecssToken.Claims.Email, accecssToken.Claims.Name); err != nil {
+	if err = s.CreateAndInvite(friday.ID, f, accessToken.Claims.Email, accessToken.Claims.Name); err != nil {
 		WriteAPIError(errors.New("calendar failure"), http.StatusInternalServerError, w)
 		return
 	}
 
+	// TODO replace GetEvent with local guest list
 	if event, err := s.calendar.GetEvent(friday.ID); err != nil && err != ErrEventNotFound {
 		slog.Warn("failed to get calendar event", "error", err, "eventID", friday.ID)
 	} else {
