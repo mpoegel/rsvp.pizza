@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSqlAccessor_GetFriendName(t *testing.T) {
+func TestSqlAccessor_GetFriendByEmail(t *testing.T) {
 	// GIVEN
 	sqlfile := "test.db"
 	os.Remove(sqlfile)
@@ -22,18 +22,19 @@ func TestSqlAccessor_GetFriendName(t *testing.T) {
 	require.Nil(t, accessor.AddFriend("foo@bar.com", "test"))
 
 	// WHEN
-	name, err := accessor.GetFriendName("foo@bar.com")
+	friend, err := accessor.GetFriendByEmail("foo@bar.com")
 
 	// THEN
 	assert.Nil(t, err)
-	assert.Equal(t, "test", name)
+	assert.Equal(t, "1", friend.ID)
+	assert.Equal(t, "test", friend.Name)
 
 	// WHEN
-	name, err = accessor.GetFriendName("bar@bar.com")
+	friend, err = accessor.GetFriendByEmail("bar@bar.com")
 
 	// THEN
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(name))
+	assert.Equal(t, 0, len(friend.Name))
 }
 
 func TestSqlAccessor_GetUpcomingFridays(t *testing.T) {

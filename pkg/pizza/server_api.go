@@ -139,19 +139,19 @@ func (s *Server) HandleAPIGetFriday(accessToken *AccessToken, w http.ResponseWri
 			continue
 		}
 
+		// TODO use local guest list instead of remote calendar list
 		if event, err := s.calendar.GetEvent(id); err != nil && err != ErrEventNotFound {
 			slog.Warn("failed to get calendar event", "error", err, "eventID", id)
 		} else {
-			friday.Guests = make([]*api.Guest, len(event.Attendees))
-			for k, email := range event.Attendees {
-				g := &api.Guest{
-					ID:    email,
-					Email: email,
+			friday.Guests = make([]*api.Guest, 0)
+			for _, email := range event.Attendees {
+				if friend, err := s.store.GetFriendByEmail(email); err == nil {
+					g := &api.Guest{
+						ID:   friend.ID,
+						Name: friend.Name,
+					}
+					friday.Guests = append(friday.Guests, g)
 				}
-				if name, err := s.store.GetFriendName(email); err == nil {
-					g.Name = name
-				}
-				friday.Guests[k] = g
 			}
 		}
 
@@ -244,16 +244,15 @@ func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseW
 	if event, err := s.calendar.GetEvent(friday.ID); err != nil && err != ErrEventNotFound {
 		slog.Warn("failed to get calendar event", "error", err, "eventID", friday.ID)
 	} else {
-		friday.Guests = make([]*api.Guest, len(event.Attendees))
-		for k, email := range event.Attendees {
-			g := &api.Guest{
-				ID:    email,
-				Email: email,
+		friday.Guests = make([]*api.Guest, 0)
+		for _, email := range event.Attendees {
+			if friend, err := s.store.GetFriendByEmail(email); err == nil {
+				g := &api.Guest{
+					ID:   friend.ID,
+					Name: friend.Name,
+				}
+				friday.Guests = append(friday.Guests, g)
 			}
-			if name, err := s.store.GetFriendName(email); err == nil {
-				g.Name = name
-			}
-			friday.Guests[k] = g
 		}
 	}
 
@@ -264,4 +263,14 @@ func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseW
 		slog.Warn("api marshal payload", "error", err)
 		WriteAPIError(errors.New("failed to compose response data"), http.StatusInternalServerError, w)
 	}
+}
+
+func (s *Server) HandleAPIGuest(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	WriteAPIError(errors.New("not yet implemented"), http.StatusTooEarly, w)
+}
+
+func (s *Server) HandleAPIGuestProfile(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	WriteAPIError(errors.New("not yet implemented"), http.StatusTooEarly, w)
 }

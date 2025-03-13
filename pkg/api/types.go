@@ -23,9 +23,30 @@ func (f *Friday) JSONAPILinks() *jsonapi.Links {
 }
 
 type Guest struct {
-	ID    string `jsonapi:"primary,guest"`
-	Email string `jsonapi:"attr,email"`
-	Name  string `jsonapi:"attr,name,omitempty"`
+	ID   string `jsonapi:"primary,guest"`
+	Name string `jsonapi:"attr,name,omitempty"`
+}
+
+func (g *Guest) JSONAPILinks() *jsonapi.Links {
+	return &jsonapi.Links{
+		"self":    fmt.Sprintf("/api/guest/%s", g.ID),
+		"profile": fmt.Sprintf("/api/guest/%s/profile", g.ID),
+	}
+}
+
+type GuestProfile struct {
+	ID       string   `jsonapi:"primary,guest"`
+	Email    string   `jsonapi:"attr,email"`
+	Toppings []string `jsonapi:"attr,toppings"`
+	Cheese   []string `jsonapi:"attr,cheese"`
+	Sauce    []string `jsonapi:"attr,sauce"`
+	Doneness string   `jsonapi:"attr,doneness"`
+}
+
+func (p *GuestProfile) JSONAPILinks() *jsonapi.Links {
+	return &jsonapi.Links{
+		"self": fmt.Sprintf("/api/guest/%s/profile", p.ID),
+	}
 }
 
 func UnmarshalFriday(r io.Reader) (*Friday, error) {

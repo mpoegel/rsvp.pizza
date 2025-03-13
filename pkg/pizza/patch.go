@@ -39,6 +39,8 @@ func Patch(args []string) {
 		err = Patch004(accessor)
 	case 5:
 		err = Patch005(accessor)
+	case 6:
+		err = Patch006(accessor)
 	}
 
 	if err != nil {
@@ -85,6 +87,19 @@ func Patch005(a *SQLAccessor) error {
 	stmt := `ALTER TABLE fridays ADD COLUMN invited text default "[]";
 			ALTER TABLE fridays ADD COLUMN max_guests int default 10;
 			ALTER TABLE fridays ADD COLUMN enabled bool default true;`
+	_, err := a.db.Exec(stmt)
+	return err
+}
+
+func Patch006(a *SQLAccessor) error {
+	stmt := `CREATE TABLE IF NOT EXISTS friends_new 
+				(id integer PRIMARY KEY AUTOINCREMENT,
+				 email text NOT NULL UNIQUE,
+				 name text,
+				 preferences text default "{}");
+			INSERT INTO friends_new (email, name, preferences) SELECT * FROM friends;
+			DROP TABLE friends;
+			ALTER TABLE friends_new RENAME TO friends;`
 	_, err := a.db.Exec(stmt)
 	return err
 }

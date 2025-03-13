@@ -9,7 +9,7 @@ import (
 type Accessor interface {
 	CreateTables() error
 
-	GetFriendName(email string) (string, error)
+	GetFriendByEmail(email string) (Friend, error)
 	AddFriend(email, name string) error
 
 	GetUpcomingFridays(daysAhead int) ([]Friday, error)
@@ -28,6 +28,7 @@ type Accessor interface {
 }
 
 type Friend struct {
+	ID    string
 	Email string
 	Name  string
 }

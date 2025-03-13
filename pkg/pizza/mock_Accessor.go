@@ -318,23 +318,23 @@ func (_c *MockAccessor_GetFriday_Call) RunAndReturn(run func(time.Time) (Friday,
 	return _c
 }
 
-// GetFriendName provides a mock function with given fields: email
-func (_m *MockAccessor) GetFriendName(email string) (string, error) {
+// GetFriendByEmail provides a mock function with given fields: email
+func (_m *MockAccessor) GetFriendByEmail(email string) (Friend, error) {
 	ret := _m.Called(email)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetFriendName")
+		panic("no return value specified for GetFriendByEmail")
 	}
 
-	var r0 string
+	var r0 Friend
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(string) (Friend, error)); ok {
 		return rf(email)
 	}
-	if rf, ok := ret.Get(0).(func(string) string); ok {
+	if rf, ok := ret.Get(0).(func(string) Friend); ok {
 		r0 = rf(email)
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(Friend)
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
@@ -346,30 +346,30 @@ func (_m *MockAccessor) GetFriendName(email string) (string, error) {
 	return r0, r1
 }
 
-// MockAccessor_GetFriendName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFriendName'
-type MockAccessor_GetFriendName_Call struct {
+// MockAccessor_GetFriendByEmail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFriendByEmail'
+type MockAccessor_GetFriendByEmail_Call struct {
 	*mock.Call
 }
 
-// GetFriendName is a helper method to define mock.On call
+// GetFriendByEmail is a helper method to define mock.On call
 //   - email string
-func (_e *MockAccessor_Expecter) GetFriendName(email interface{}) *MockAccessor_GetFriendName_Call {
-	return &MockAccessor_GetFriendName_Call{Call: _e.mock.On("GetFriendName", email)}
+func (_e *MockAccessor_Expecter) GetFriendByEmail(email interface{}) *MockAccessor_GetFriendByEmail_Call {
+	return &MockAccessor_GetFriendByEmail_Call{Call: _e.mock.On("GetFriendByEmail", email)}
 }
 
-func (_c *MockAccessor_GetFriendName_Call) Run(run func(email string)) *MockAccessor_GetFriendName_Call {
+func (_c *MockAccessor_GetFriendByEmail_Call) Run(run func(email string)) *MockAccessor_GetFriendByEmail_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string))
 	})
 	return _c
 }
 
-func (_c *MockAccessor_GetFriendName_Call) Return(_a0 string, _a1 error) *MockAccessor_GetFriendName_Call {
+func (_c *MockAccessor_GetFriendByEmail_Call) Return(_a0 Friend, _a1 error) *MockAccessor_GetFriendByEmail_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockAccessor_GetFriendName_Call) RunAndReturn(run func(string) (string, error)) *MockAccessor_GetFriendName_Call {
+func (_c *MockAccessor_GetFriendByEmail_Call) RunAndReturn(run func(string) (Friend, error)) *MockAccessor_GetFriendByEmail_Call {
 	_c.Call.Return(run)
 	return _c
 }

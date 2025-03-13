@@ -3,6 +3,7 @@ package pizza
 import (
 	"database/sql"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -30,7 +31,8 @@ func (a *SQLAccessor) Close() {
 
 func (a *SQLAccessor) CreateTables() error {
 	stmt := `CREATE TABLE friends (
-		email       text NOT NULL PRIMARY KEY,
+		id          integer PRIMARY KEY AUTOINCREMENT,
+		email       text NOT NULL UNIQUE,
 		name        text,
 		preferences text default "{}"
 	)`
@@ -62,7 +64,7 @@ func (a *SQLAccessor) CreateTables() error {
 	if _, err := a.db.Exec(stmt); err != nil {
 		return err
 	}
-	_, err := a.db.Exec(`INSERT INTO app_versions (name, version) VALUES ('schema', 5)`)
+	_, err := a.db.Exec(`INSERT INTO app_versions (name, version) VALUES ('schema', 6)`)
 	return err
 }
 
@@ -87,14 +89,16 @@ func (a *SQLAccessor) PatchTables() error {
 	return err
 }
 
-func (a *SQLAccessor) GetFriendName(email string) (string, error) {
-	stmt, err := a.db.Prepare("select name from friends where email = ?")
+func (a *SQLAccessor) GetFriendByEmail(email string) (Friend, error) {
+	friend := Friend{}
+	stmt, err := a.db.Prepare("select id, name from friends where email = ?")
 	if err != nil {
-		return "", err
+		return friend, err
 	}
-	var name string
-	err = stmt.QueryRow(email).Scan(&name)
-	return name, err
+	var id int64
+	err = stmt.QueryRow(email).Scan(&id, &friend.Name)
+	friend.ID = strconv.FormatInt(id, 10)
+	return friend, err
 }
 
 func (a *SQLAccessor) GetUpcomingFridays(daysAhead int) ([]Friday, error) {

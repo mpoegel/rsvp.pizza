@@ -66,11 +66,12 @@ func (s *Server) HandledWrapped(w http.ResponseWriter, r *http.Request) {
 		for i, t := range wrapped.Friends[email] {
 			data.Attendance[i] = t.Format(time.DateOnly)
 		}
-		data.Name, err = s.store.GetFriendName(email)
+		friend, err := s.store.GetFriendByEmail(email)
 		if err != nil {
 			slog.Error("could not get friend name", "error", err)
 			return
 		}
+		data.Name = friend.Name
 		// only use the first name
 		nameParts := strings.Split(data.Name, " ")
 		data.Name = nameParts[0]

@@ -2,13 +2,11 @@ package pizza_test
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -102,10 +100,9 @@ func TestHandleApiGetFriday(t *testing.T) {
 	}
 	friday1ID := strconv.FormatInt(friday1.Date.Unix(), 10)
 	accessor.On("GetUpcomingFridays", 30).Return([]pizza.Friday{friday1}, nil)
-	accessor.On("GetFriendName", "kirk").Return("Captain Kirk", nil)
-	accessor.On("GetFriendName", "spock").Return("", errors.New("no name found"))
+	accessor.On("GetFriendByEmail", "kirk").Return(pizza.Friend{ID: "1", Name: "Captain Kirk"}, nil)
 	event := pizza.CalendarEvent{
-		Attendees: []string{"kirk", "spock"},
+		Attendees: []string{"kirk"},
 	}
 	calendar.On("GetEvent", friday1ID).Return(event, nil)
 
@@ -128,7 +125,7 @@ func TestHandleApiGetFriday(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	b, err := io.ReadAll(res.Body)
 	assert.Nil(t, err)
-	expectedFridays, err := api.UnmarshalFridays(strings.NewReader(fmt.Sprintf(`{
+	expected := fmt.Sprintf(`{
 	"data":[{
 		"type":"friday",
 		"id":"%s",
@@ -139,8 +136,7 @@ func TestHandleApiGetFriday(t *testing.T) {
 		"relationships":{
 			"guests":{
 				"data":[
-					{"id":"kirk","type":"guest"},
-					{"id":"spock","type":"guest"}
+					{"id":"1","type":"guest"}
 				]
 			}
 		},
@@ -150,27 +146,21 @@ func TestHandleApiGetFriday(t *testing.T) {
 	}],
 	"included":[
 		{
-			"id":"kirk",
+			"id":"1",
 			"type":"guest",
 			"attributes": {
-				"email":"kirk",
 				"name":"Captain Kirk"
-			}
-		},
-		{
-			"id":"spock",
-			"type":"guest",
-			"attributes": {
-				"email":"spock"
+			},
+			"links": {
+				"self": "/api/guest/1",
+				"profile": "/api/guest/1/profile"
 			}
 		}
 	]
 }`,
-		friday1ID, friday1ID, friday1ID)))
-	require.Nil(t, err)
-	actualFridays, err := api.UnmarshalFridays(bytes.NewReader(b))
-	assert.Nil(t, err)
-	assert.ElementsMatch(t, expectedFridays, actualFridays)
+		friday1ID, friday1ID, friday1ID)
+	assert.JSONEq(t, expected, string(b))
+
 	authenticator.AssertExpectations(t)
 	accessor.AssertExpectations(t)
 	calendar.AssertExpectations(t)
@@ -212,10 +202,10 @@ func TestHandleApiPatchFriday(t *testing.T) {
 	}
 	accessor.On("GetFriday", friday.Date).Return(friday, nil)
 	accessor.On("AddFriendToFriday", token.Claims.Email, friday).Return(nil)
-	accessor.On("GetFriendName", mock.Anything).Return("", errors.New("no name found"))
+	accessor.On("GetFriendByEmail", mock.Anything).Return(pizza.Friend{ID: "2", Name: "Spock"}, nil)
 	calendar.On("InviteToEvent", reqFriday.ID, token.Claims.Email, token.Claims.GivenName).Return(nil)
 	event := pizza.CalendarEvent{
-		Attendees: []string{"kirk", "spock"},
+		Attendees: []string{"spock"},
 	}
 	calendar.On("GetEvent", reqFriday.ID).Return(event, nil)
 
@@ -242,7 +232,7 @@ func TestHandleApiPatchFriday(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	b, err := io.ReadAll(res.Body)
 	assert.Nil(t, err)
-	expectedFriday, err := api.UnmarshalFriday(strings.NewReader(fmt.Sprintf(`{
+	expected := fmt.Sprintf(`{
 	"data":{
 		"type":"friday",
 		"id":"%s",
@@ -253,8 +243,7 @@ func TestHandleApiPatchFriday(t *testing.T) {
 		"relationships":{
 			"guests":{
 				"data":[
-					{"id":"kirk","type":"guest"},
-					{"id":"spock","type":"guest"}
+					{"id":"2","type":"guest"}
 				]
 			}
 		},
@@ -264,26 +253,20 @@ func TestHandleApiPatchFriday(t *testing.T) {
 	},
 	"included":[
 		{
-			"id":"kirk",
+			"id":"2",
 			"type":"guest",
 			"attributes": {
-				"email":"kirk"
-			}
-		},
-		{
-			"id":"spock",
-			"type":"guest",
-			"attributes": {
-				"email":"spock"
+				"name": "Spock"
+			},
+			"links": {
+				"self": "/api/guest/2",
+				"profile": "/api/guest/2/profile"
 			}
 		}
 	]
 }`,
-		reqFriday.ID, reqFriday.ID, reqFriday.ID)))
-	require.Nil(t, err)
-	actualFriday, err := api.UnmarshalFriday(bytes.NewReader(b))
-	assert.Nil(t, err)
-	assert.ObjectsAreEqual(expectedFriday, actualFriday)
+		reqFriday.ID, reqFriday.ID, reqFriday.ID)
+	assert.JSONEq(t, expected, string(b))
 
 	authenticator.AssertExpectations(t)
 	accessor.AssertExpectations(t)

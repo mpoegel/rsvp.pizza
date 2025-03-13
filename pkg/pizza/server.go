@@ -87,6 +87,8 @@ func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/friday", s.HandleAPIFriday)
 	mux.HandleFunc("GET /api/friday/{ID}", s.HandleAPIFriday)
 	mux.HandleFunc("PATCH /api/friday/{ID}", s.HandleAPIFriday)
+	mux.HandleFunc("GET /api/guest/{ID}", s.HandleAPIGuest)
+	mux.HandleFunc("GET /api/guest/{ID}/profile", s.HandleAPIGuestProfile)
 
 	mux.HandleFunc("GET /p/{ID}", s.HandlePizza)
 }
@@ -226,10 +228,10 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fData.Guests = make([]string, len(event.Attendees))
 				for k, email := range event.Attendees {
-					if name, err := s.store.GetFriendName(email); err != nil {
+					if friend, err := s.store.GetFriendByEmail(email); err != nil {
 						fData.Guests[k] = email
 					} else {
-						fData.Guests[k] = name
+						fData.Guests[k] = friend.Name
 					}
 				}
 			}
