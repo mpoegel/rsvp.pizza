@@ -89,6 +89,17 @@ func (a *SQLAccessor) PatchTables() error {
 	return err
 }
 
+func (a *SQLAccessor) GetFriendByID(ID string) (Friend, error) {
+	friend := Friend{}
+	stmt, err := a.db.Prepare("select email, name from friends where id = ?")
+	if err != nil {
+		return friend, err
+	}
+	err = stmt.QueryRow(ID).Scan(&friend.Email, &friend.Name)
+	friend.ID = ID
+	return friend, err
+}
+
 func (a *SQLAccessor) GetFriendByEmail(email string) (Friend, error) {
 	friend := Friend{}
 	stmt, err := a.db.Prepare("select id, name from friends where email = ?")
@@ -98,6 +109,7 @@ func (a *SQLAccessor) GetFriendByEmail(email string) (Friend, error) {
 	var id int64
 	err = stmt.QueryRow(email).Scan(&id, &friend.Name)
 	friend.ID = strconv.FormatInt(id, 10)
+	friend.Email = email
 	return friend, err
 }
 

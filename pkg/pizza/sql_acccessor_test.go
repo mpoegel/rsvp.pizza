@@ -28,6 +28,14 @@ func TestSqlAccessor_GetFriendByEmail(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "1", friend.ID)
 	assert.Equal(t, "test", friend.Name)
+	assert.Equal(t, "foo@bar.com", friend.Email)
+
+	// WHEN
+	friend, err = accessor.GetFriendByID("1")
+	assert.Nil(t, err)
+	assert.Equal(t, "1", friend.ID)
+	assert.Equal(t, "test", friend.Name)
+	assert.Equal(t, "foo@bar.com", friend.Email)
 
 	// WHEN
 	friend, err = accessor.GetFriendByEmail("bar@bar.com")

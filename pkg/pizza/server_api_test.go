@@ -13,6 +13,7 @@ import (
 	jsonapi "github.com/hashicorp/jsonapi"
 	api "github.com/mpoegel/rsvp.pizza/pkg/api"
 	pizza "github.com/mpoegel/rsvp.pizza/pkg/pizza"
+	"github.com/mpoegel/rsvp.pizza/pkg/types"
 	assert "github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 	require "github.com/stretchr/testify/require"
@@ -271,4 +272,157 @@ func TestHandleApiPatchFriday(t *testing.T) {
 	authenticator.AssertExpectations(t)
 	accessor.AssertExpectations(t)
 	calendar.AssertExpectations(t)
+}
+
+func TestHandleApiGetGuest(t *testing.T) {
+	// GIVEN
+	config := pizza.LoadConfigEnv()
+	config.StaticDir = "../../static"
+	accessor := &pizza.MockAccessor{}
+	calendar := &pizza.MockCalendar{}
+	authenticator := &pizza.MockAuthenticator{}
+	metrics := &pizza.MockMetricsRegistry{}
+	counter := &pizza.MockCounterMetric{}
+	groupName := "all"
+	metrics.On("NewCounterMetric", mock.Anything, mock.Anything).Return(counter)
+	counter.On("Increment").Return()
+
+	token := &pizza.AccessToken{
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+		Claims: pizza.TokenClaims{
+			Groups: []string{groupName},
+			Email:  "foo@bar.com",
+		},
+	}
+	authenticator.On("DecodeAccessToken", mock.Anything, "token").Return(token, nil)
+	friend := pizza.Friend{
+		ID:    "100",
+		Name:  "Picard",
+		Email: "@",
+	}
+	accessor.On("GetFriendByID", "100").Return(friend, nil)
+
+	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
+	require.Nil(t, err)
+	mux := http.NewServeMux()
+	server.LoadRoutes(mux)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// WHEN
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/guest/100", nil)
+	require.Nil(t, err)
+	req.Header.Add("Authorization", "Bearer token")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	res, err := http.DefaultClient.Do(req)
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	b, err := io.ReadAll(res.Body)
+	assert.Nil(t, err)
+	expected := fmt.Sprintf(`{
+	"data":{
+		"type":"guest",
+		"id":"%s",
+		"attributes":{
+			"name":"%s"
+		},
+		"links":{
+			"self":"/api/guest/%s",
+			"profile":"/api/guest/%s/profile"
+		}
+	}
+}`,
+		friend.ID, friend.Name, friend.ID, friend.ID)
+	assert.JSONEq(t, expected, string(b))
+
+	authenticator.AssertExpectations(t)
+	accessor.AssertExpectations(t)
+}
+
+func TestHandleApiGetGuestProfile(t *testing.T) {
+	// GIVEN
+	config := pizza.LoadConfigEnv()
+	config.StaticDir = "../../static"
+	accessor := &pizza.MockAccessor{}
+	calendar := &pizza.MockCalendar{}
+	authenticator := &pizza.MockAuthenticator{}
+	metrics := &pizza.MockMetricsRegistry{}
+	counter := &pizza.MockCounterMetric{}
+	groupName := "all"
+	metrics.On("NewCounterMetric", mock.Anything, mock.Anything).Return(counter)
+	counter.On("Increment").Return()
+
+	token := &pizza.AccessToken{
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+		Claims: pizza.TokenClaims{
+			Groups: []string{groupName},
+			Email:  "foo@bar.com",
+		},
+	}
+	authenticator.On("DecodeAccessToken", mock.Anything, "token").Return(token, nil)
+	friend := pizza.Friend{
+		ID:    "100",
+		Name:  "Picard",
+		Email: "foo@bar.com",
+	}
+	accessor.On("GetFriendByEmail", friend.Email).Return(friend, nil)
+	accessor.On("GetFriendByID", "100").Return(friend, nil)
+	preferences := pizza.Preferences{
+		Toppings: []types.Topping{types.Pepperoni},
+		Cheese:   []types.Cheese{types.Whole_Mozzarella},
+		Sauce:    []types.Sauce{types.Raw_Tomatoes},
+		Doneness: types.Medium_Well,
+	}
+	accessor.On("GetPreferences", friend.Email).Return(preferences, nil)
+
+	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
+	require.Nil(t, err)
+	mux := http.NewServeMux()
+	server.LoadRoutes(mux)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// WHEN
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/guest/100/profile", nil)
+	require.Nil(t, err)
+	req.Header.Add("Authorization", "Bearer token")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	res, err := http.DefaultClient.Do(req)
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	b, err := io.ReadAll(res.Body)
+	assert.Nil(t, err)
+	expected := fmt.Sprintf(`{
+	"data":{
+		"type":"guest",
+		"id":"%s",
+		"attributes":{
+			"email":"%s",
+			"toppings": ["%s"],
+			"cheese": ["%s"],
+			"sauce": ["%s"],
+			"doneness": "%s"
+		},
+		"links":{
+			"self":"/api/guest/%s/profile"
+		}
+	}
+}`,
+		friend.ID,
+		friend.Email,
+		preferences.Toppings[0].String(),
+		preferences.Cheese[0].String(),
+		preferences.Sauce[0].String(),
+		preferences.Doneness.String(),
+		friend.ID)
+	assert.JSONEq(t, expected, string(b))
+
+	authenticator.AssertExpectations(t)
+	accessor.AssertExpectations(t)
 }

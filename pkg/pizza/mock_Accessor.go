@@ -374,6 +374,62 @@ func (_c *MockAccessor_GetFriendByEmail_Call) RunAndReturn(run func(string) (Fri
 	return _c
 }
 
+// GetFriendByID provides a mock function with given fields: ID
+func (_m *MockAccessor) GetFriendByID(ID string) (Friend, error) {
+	ret := _m.Called(ID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFriendByID")
+	}
+
+	var r0 Friend
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (Friend, error)); ok {
+		return rf(ID)
+	}
+	if rf, ok := ret.Get(0).(func(string) Friend); ok {
+		r0 = rf(ID)
+	} else {
+		r0 = ret.Get(0).(Friend)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(ID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAccessor_GetFriendByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFriendByID'
+type MockAccessor_GetFriendByID_Call struct {
+	*mock.Call
+}
+
+// GetFriendByID is a helper method to define mock.On call
+//   - ID string
+func (_e *MockAccessor_Expecter) GetFriendByID(ID interface{}) *MockAccessor_GetFriendByID_Call {
+	return &MockAccessor_GetFriendByID_Call{Call: _e.mock.On("GetFriendByID", ID)}
+}
+
+func (_c *MockAccessor_GetFriendByID_Call) Run(run func(ID string)) *MockAccessor_GetFriendByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockAccessor_GetFriendByID_Call) Return(_a0 Friend, _a1 error) *MockAccessor_GetFriendByID_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAccessor_GetFriendByID_Call) RunAndReturn(run func(string) (Friend, error)) *MockAccessor_GetFriendByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetPreferences provides a mock function with given fields: email
 func (_m *MockAccessor) GetPreferences(email string) (Preferences, error) {
 	ret := _m.Called(email)

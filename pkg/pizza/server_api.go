@@ -81,7 +81,7 @@ func (s *Server) HandleAPIFriday(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPatch:
 		s.HandleAPIPatchFriday(claims, w, r)
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		WriteAPIError(errors.New("only GET and PATCH allowed"), http.StatusMethodNotAllowed, w)
 	}
 }
 
@@ -198,7 +198,9 @@ func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseW
 		WriteAPIError(fmt.Errorf("no matching friday found with ID '%s'", friday.ID), http.StatusNotFound, w)
 		return
 	}
-	friday.Details = *f.Details
+	if f.Details != nil {
+		friday.Details = *f.Details
+	}
 	friday.StartTime = f.Date
 
 	// not part of invited group OR friday not enabled
@@ -209,9 +211,13 @@ func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseW
 
 	// check the requested guests
 	for _, g := range friday.Guests {
+		// backwards compatibility for RSVPing using email instead of ID
 		if g.ID != accessToken.Claims.Email {
-			WriteAPIError(fmt.Errorf("not allowed to invite guest '%s'", g.ID), http.StatusUnauthorized, w)
-			return
+			self, err := s.store.GetFriendByID(g.ID)
+			if err != nil || self.Email != accessToken.Claims.Email {
+				WriteAPIError(fmt.Errorf("not allowed to invite guest '%s'", g.ID), http.StatusUnauthorized, w)
+				return
+			}
 		}
 	}
 
@@ -266,11 +272,114 @@ func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseW
 }
 
 func (s *Server) HandleAPIGuest(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	WriteAPIError(errors.New("not yet implemented"), http.StatusTooEarly, w)
+	_, ok := s.CheckAuthorization(r)
+	if !ok {
+		WriteAPIError(errors.New("not authorized"), http.StatusUnauthorized, w)
+		return
+	}
+
+	if r.Header.Get("Accept") != jsonapi.MediaType {
+		WriteAPIError(fmt.Errorf("must accept %s", jsonapi.MediaType), http.StatusNotAcceptable, w)
+		return
+	}
+
+	guestID := r.PathValue("ID")
+	if guestID == "" {
+		WriteAPIError(errors.New("missing guest ID"), http.StatusBadRequest, w)
+		return
+	}
+
+	friend, err := s.store.GetFriendByID(guestID)
+	if err != nil {
+		WriteAPIError(errors.New("guest does not exist"), http.StatusNotFound, w)
+		return
+	}
+
+	guest := &api.Guest{
+		ID:   guestID,
+		Name: friend.Name,
+	}
+
+	w.Header().Set("Content-Type", jsonapi.MediaType)
+	w.WriteHeader(http.StatusOK)
+
+	if err = jsonapi.MarshalPayload(w, guest); err != nil {
+		slog.Warn("api marshal payload", "error", err)
+		WriteAPIError(errors.New("failed to compose response data"), http.StatusInternalServerError, w)
+	}
 }
 
 func (s *Server) HandleAPIGuestProfile(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	WriteAPIError(errors.New("not yet implemented"), http.StatusTooEarly, w)
+	token, ok := s.CheckAuthorization(r)
+	if !ok {
+		WriteAPIError(errors.New("not authorized"), http.StatusUnauthorized, w)
+		return
+	}
+
+	if r.Header.Get("Accept") != jsonapi.MediaType {
+		WriteAPIError(fmt.Errorf("must accept %s", jsonapi.MediaType), http.StatusNotAcceptable, w)
+		return
+	}
+
+	guestID := r.PathValue("ID")
+	if guestID == "" {
+		WriteAPIError(errors.New("missing guest ID"), http.StatusBadRequest, w)
+		return
+	}
+
+	if self, err := s.store.GetFriendByEmail(token.Claims.Email); err != nil {
+		// user does not exist in our db, but is authorized, so add them
+		if err = s.store.AddFriend(token.Claims.Email, token.Claims.Name); err != nil {
+			slog.Warn("failed to add new friend", "err", err, "email", token.Claims.Email)
+			WriteAPIError(errors.New("failed to create new friend"), http.StatusInternalServerError, w)
+			return
+		}
+	} else {
+		// only the pizza hosts can view other guest profiles
+		if self.ID != guestID && !token.Claims.HasRole("pizza_host") {
+			WriteAPIError(errors.New("not authorized to view guest profile"), http.StatusForbidden, w)
+			return
+		}
+	}
+
+	friend, err := s.store.GetFriendByID(guestID)
+	if err != nil {
+		WriteAPIError(errors.New("guest does not exist"), http.StatusNotFound, w)
+		return
+	}
+
+	prefs, err := s.store.GetPreferences(friend.Email)
+	if err != nil {
+		slog.Warn("failed to get preferences for friend that should exist", "err", err, "email", friend.Email)
+		WriteAPIError(errors.New("could not get guest preferences"), http.StatusInternalServerError, w)
+		return
+	}
+
+	guestProfile := api.GuestProfile{
+		ID:       guestID,
+		Email:    friend.Email,
+		Toppings: make([]string, len(prefs.Toppings)),
+		Cheese:   make([]string, len(prefs.Cheese)),
+		Sauce:    make([]string, len(prefs.Sauce)),
+		Doneness: prefs.Doneness.String(),
+	}
+
+	for i, topping := range prefs.Toppings {
+		guestProfile.Toppings[i] = topping.String()
+	}
+	for i, cheese := range prefs.Cheese {
+		guestProfile.Cheese[i] = cheese.String()
+	}
+	for i, sauce := range prefs.Sauce {
+		guestProfile.Sauce[i] = sauce.String()
+	}
+
+	w.Header().Set("Content-Type", jsonapi.MediaType)
+	w.WriteHeader(http.StatusOK)
+
+	if err = jsonapi.MarshalPayload(w, &guestProfile); err != nil {
+		slog.Warn("api marshal payload", "error", err)
+		WriteAPIError(errors.New("failed to compose response data"), http.StatusInternalServerError, w)
+	}
+
 }

@@ -9,6 +9,7 @@ import (
 type Accessor interface {
 	CreateTables() error
 
+	GetFriendByID(ID string) (Friend, error)
 	GetFriendByEmail(email string) (Friend, error)
 	AddFriend(email, name string) error
 
