@@ -122,3 +122,37 @@ func TestSqlAccessor_RemoveFriday(t *testing.T) {
 	require.Equal(t, 1, len(fridays))
 	assert.Equal(t, f2, fridays[0].Date)
 }
+
+func TestSqlAccessor_AddAndRemoveFriendFriday(t *testing.T) {
+	// GIVEN
+	sqlfile := "test.db"
+	os.Remove(sqlfile)
+	defer os.Remove(sqlfile)
+	accessor, err := pizza.NewSQLAccessor(sqlfile, true)
+	require.Nil(t, err)
+	defer accessor.Close()
+	require.Nil(t, accessor.CreateTables())
+	loc, _ := time.LoadLocation("America/New_York")
+	f1 := time.Date(2023, 12, 22, 17, 30, 0, 0, loc)
+	require.Nil(t, accessor.AddFriday(f1))
+
+	// WHEN
+	assert.Nil(t, accessor.AddFriendToFriday("foo", pizza.Friday{Date: f1}))
+	assert.Nil(t, accessor.AddFriendToFriday("bar", pizza.Friday{Date: f1}))
+	friday, err := accessor.GetFriday(f1)
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(friday.Guests))
+	assert.Equal(t, "foo", friday.Guests[0])
+	assert.Equal(t, "bar", friday.Guests[1])
+
+	// WHEN
+	assert.Nil(t, accessor.RemoveFriendFromFriday("foo", f1))
+	friday, err = accessor.GetFriday(f1)
+
+	// THEN
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(friday.Guests))
+	assert.Equal(t, "bar", friday.Guests[0])
+}

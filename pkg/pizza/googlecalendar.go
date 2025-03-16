@@ -151,16 +151,41 @@ func (c *GoogleCalendar) InviteToEvent(eventID, email, name string) error {
 	}
 
 	for _, attendee := range event.Attendees {
-		if attendee.Email == email {
+		if attendee.Email == email && attendee.ResponseStatus != "declined" {
 			slog.Info("already invited", "email", email, "eventID", eventID)
 			return nil
 		}
 	}
 
 	event.Attendees = append(event.Attendees, &calendar.EventAttendee{
-		Email:       email,
-		DisplayName: name,
+		Email:          email,
+		DisplayName:    name,
+		ResponseStatus: "needsAction",
 	})
+
+	// TODO add timeout
+	_, err = c.srv.Events.Update(c.id, eventID, event).Do()
+	return err
+}
+
+func (c *GoogleCalendar) DeclineEvent(eventID, email string) error {
+	// TODO add locks
+	event, err := c.getCalendarEvent(eventID)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for _, attendee := range event.Attendees {
+		if attendee.Email == email {
+			attendee.ResponseStatus = "declined"
+			found = true
+			break
+		}
+	}
+	if !found {
+		return ErrNotInvited
+	}
 
 	// TODO add timeout
 	_, err = c.srv.Events.Update(c.id, eventID, event).Do()

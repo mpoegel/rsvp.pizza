@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -72,6 +73,7 @@ func NewServer(config Config, accessor Accessor, calendar Calendar, auth Authent
 func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /", s.HandleIndex)
 	mux.HandleFunc("POST /rsvp", s.HandleRSVP)
+	mux.HandleFunc("DELETE /rsvp", s.HandleDeleteRSVP)
 	mux.HandleFunc("GET /wrapped", s.HandledWrapped)
 	mux.HandleFunc("GET /login", s.HandleLogin)
 	mux.HandleFunc("GET /login/callback", s.HandleLoginCallback)
@@ -332,6 +334,59 @@ func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) e
 
 	slog.Debug("event updated", "eventID", ID, "email", email, "name", name)
 	return nil
+}
+
+func (s *Server) HandleDeleteRSVP(w http.ResponseWriter, r *http.Request) {
+	claims, ok := s.authenticateRequest(r)
+	if !ok {
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+		return
+	}
+
+	form := r.URL.Query()
+	dates, ok := form["date"]
+	if !ok {
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+		return
+	}
+
+	slog.Debug("incoming decline request", "url", r.URL, "email", claims.Email, "dates", dates)
+	estZone, _ := time.LoadLocation("America/New_York")
+
+	for _, d := range dates {
+		fridayID, err := strconv.ParseInt(d, 10, 64)
+		if err != nil {
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+			return
+		}
+
+		friday, err := s.store.GetFriday(time.Unix(fridayID, 0).In(estZone))
+		if err != nil {
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+			return
+		}
+
+		if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
+			// not part of invited group OR friday not enabled
+			template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+			return
+		}
+
+		if slices.Contains(friday.Guests, claims.Email) {
+			if err = s.store.RemoveFriendFromFriday(claims.Email, friday.Date); err != nil {
+				slog.Error("failed to remove friend from friday", "err", err, "email", claims.Email, "friday", d)
+				template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+				return
+			}
+			if err = s.calendar.DeclineEvent(d, claims.Email); err != nil {
+				slog.Error("failed to decline calendar invite", "err", err, "email", claims.Email, "friday", d)
+				template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+				return
+			}
+		}
+	}
+
+	template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/decline_success.html"))).Execute(w, nil)
 }
 
 type PixelPizzaPageData struct {

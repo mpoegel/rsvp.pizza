@@ -23,6 +23,7 @@ type Accessor interface {
 	RemoveFriday(date time.Time) error
 	UpdateFriday(friday Friday) error
 	AddFriendToFriday(email string, friday Friday) error
+	RemoveFriendFromFriday(email string, date time.Time) error
 
 	GetPreferences(email string) (Preferences, error)
 	SetPreferences(email string, preferences Preferences) error

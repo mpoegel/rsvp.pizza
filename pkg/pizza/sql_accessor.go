@@ -273,6 +273,45 @@ func (a *SQLAccessor) AddFriendToFriday(email string, friday Friday) error {
 	return err
 }
 
+func (a *SQLAccessor) RemoveFriendFromFriday(email string, date time.Time) error {
+	var invited []string
+	stmt, err := a.db.Prepare("SELECT invited FROM fridays WHERE start_time = ?")
+	if err != nil {
+		return err
+	}
+	var rawInvited string
+	err = stmt.QueryRow(date).Scan(&rawInvited)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal([]byte(rawInvited), &invited); err != nil {
+		return err
+	}
+
+	found := false
+	for i, guest := range invited {
+		if guest == email {
+			invited[i] = invited[len(invited)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		// not invited yet
+		return nil
+	}
+	updatedInvited, err := json.Marshal(invited[:len(invited)-1])
+	if err != nil {
+		return err
+	}
+	stmt, err = a.db.Prepare("UPDATE fridays SET invited = ? WHERE start_time = ?")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(string(updatedInvited), date)
+	return err
+}
+
 func (a *SQLAccessor) GetPreferences(email string) (Preferences, error) {
 	var prefs Preferences
 	stmt, err := a.db.Prepare("SELECT preferences FROM friends WHERE email=?")

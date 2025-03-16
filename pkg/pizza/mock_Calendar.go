@@ -159,6 +159,53 @@ func (_c *MockCalendar_CreateEvent_Call) RunAndReturn(run func(CalendarEvent) er
 	return _c
 }
 
+// DeclineEvent provides a mock function with given fields: eventID, email
+func (_m *MockCalendar) DeclineEvent(eventID string, email string) error {
+	ret := _m.Called(eventID, email)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeclineEvent")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(eventID, email)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCalendar_DeclineEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeclineEvent'
+type MockCalendar_DeclineEvent_Call struct {
+	*mock.Call
+}
+
+// DeclineEvent is a helper method to define mock.On call
+//   - eventID string
+//   - email string
+func (_e *MockCalendar_Expecter) DeclineEvent(eventID interface{}, email interface{}) *MockCalendar_DeclineEvent_Call {
+	return &MockCalendar_DeclineEvent_Call{Call: _e.mock.On("DeclineEvent", eventID, email)}
+}
+
+func (_c *MockCalendar_DeclineEvent_Call) Run(run func(eventID string, email string)) *MockCalendar_DeclineEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockCalendar_DeclineEvent_Call) Return(_a0 error) *MockCalendar_DeclineEvent_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCalendar_DeclineEvent_Call) RunAndReturn(run func(string, string) error) *MockCalendar_DeclineEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetEvent provides a mock function with given fields: eventID
 func (_m *MockCalendar) GetEvent(eventID string) (CalendarEvent, error) {
 	ret := _m.Called(eventID)
