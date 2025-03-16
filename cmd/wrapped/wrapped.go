@@ -48,10 +48,10 @@ func main() {
 	for _, event := range events {
 		slog.Info("processing event", "summary", event.Summary, "start", event.StartTime)
 		for _, attendee := range event.Attendees {
-			if _, ok := data.Friends[attendee]; !ok {
-				data.Friends[attendee] = 1
+			if _, ok := data.Friends[attendee.Email]; !ok {
+				data.Friends[attendee.Email] = 1
 			} else {
-				data.Friends[attendee]++
+				data.Friends[attendee.Email]++
 			}
 		}
 		data.TotalFridays++

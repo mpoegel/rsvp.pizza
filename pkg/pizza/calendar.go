@@ -18,7 +18,7 @@ type Calendar interface {
 
 type CalendarEvent struct {
 	AnyoneCanAddSelf      bool
-	Attendees             []string
+	Attendees             []CalendarAttendee
 	Description           string
 	EndTime               time.Time
 	GuestsCanInviteOthers bool
@@ -29,6 +29,11 @@ type CalendarEvent struct {
 	Status                string
 	Summary               string
 	Visibility            string
+}
+
+type CalendarAttendee struct {
+	Email          string
+	ResponseStatus string
 }
 
 var (

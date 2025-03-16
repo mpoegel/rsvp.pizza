@@ -144,8 +144,8 @@ func (s *Server) HandleAPIGetFriday(accessToken *AccessToken, w http.ResponseWri
 			slog.Warn("failed to get calendar event", "error", err, "eventID", id)
 		} else {
 			friday.Guests = make([]*api.Guest, 0)
-			for _, email := range event.Attendees {
-				if friend, err := s.store.GetFriendByEmail(email); err == nil {
+			for _, attendee := range event.Attendees {
+				if friend, err := s.store.GetFriendByEmail(attendee.Email); err == nil {
 					g := &api.Guest{
 						ID:   friend.ID,
 						Name: friend.Name,
@@ -251,8 +251,8 @@ func (s *Server) HandleAPIPatchFriday(accessToken *AccessToken, w http.ResponseW
 		slog.Warn("failed to get calendar event", "error", err, "eventID", friday.ID)
 	} else {
 		friday.Guests = make([]*api.Guest, 0)
-		for _, email := range event.Attendees {
-			if friend, err := s.store.GetFriendByEmail(email); err == nil {
+		for _, attendee := range event.Attendees {
+			if friend, err := s.store.GetFriendByEmail(attendee.Email); err == nil {
 				g := &api.Guest{
 					ID:   friend.ID,
 					Name: friend.Name,

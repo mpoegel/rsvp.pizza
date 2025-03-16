@@ -98,9 +98,9 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 			f.Guests = make([]string, 0)
 		} else {
 			f.Guests = make([]string, len(event.Attendees))
-			for k, email := range event.Attendees {
-				if friend, err := s.store.GetFriendByEmail(email); err != nil {
-					f.Guests[k] = email
+			for k, attendee := range event.Attendees {
+				if friend, err := s.store.GetFriendByEmail(attendee.Email); err != nil {
+					f.Guests[k] = attendee.Email
 				} else {
 					f.Guests[k] = friend.Name
 				}

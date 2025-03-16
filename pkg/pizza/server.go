@@ -113,14 +113,33 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) WatchCalendar(period time.Duration) {
-	timer := time.NewTimer(period)
+	timer := time.NewTimer(0)
+	estZone, _ := time.LoadLocation("America/New_York")
 	for {
-		if _, err := s.calendar.ListEvents(1); err != nil {
-			slog.Warn("failed to list calendar events", "error", err)
-		} else {
-			slog.Debug("calendar credentials are valid")
-		}
 		<-timer.C
+		fridays, err := s.store.GetUpcomingFridays(30)
+		if err != nil {
+			slog.Error("[sync] failed to get upcoming fridays", "err", err)
+			timer.Reset(1 * time.Minute)
+		}
+		for _, friday := range fridays {
+			t := friday.Date.In(estZone)
+			eventID := strconv.FormatInt(t.Unix(), 10)
+			event, err := s.calendar.GetEvent(eventID)
+			if err != nil {
+				slog.Warn("[sync] failed to get calendar event", "err", err, "eventID", eventID)
+			} else {
+				for _, attendee := range event.Attendees {
+					if attendee.ResponseStatus == "declined" {
+						if err = s.store.RemoveFriendFromFriday(attendee.Email, t); err != nil {
+							slog.Error("[sync] failed to remove friend from friday after calendar decline", "err", err, "email", attendee.Email, "eventID", eventID)
+						}
+					}
+				}
+			}
+		}
+
+		slog.Info("[sync] calendar sync complete")
 		timer.Reset(period)
 	}
 }
@@ -229,9 +248,9 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 				fData.Guests = make([]string, 0)
 			} else {
 				fData.Guests = make([]string, len(event.Attendees))
-				for k, email := range event.Attendees {
-					if friend, err := s.store.GetFriendByEmail(email); err != nil {
-						fData.Guests[k] = email
+				for k, attendee := range event.Attendees {
+					if friend, err := s.store.GetFriendByEmail(attendee.Email); err != nil {
+						fData.Guests[k] = attendee.Email
 					} else {
 						fData.Guests[k] = friend.Name
 					}

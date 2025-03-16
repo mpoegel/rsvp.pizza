@@ -111,9 +111,12 @@ func (c *GoogleCalendar) googleEventToEvent(event *calendar.Event) CalendarEvent
 			slog.Error("could not parse event end time", "eventID", event.Id, "time", event.End.DateTime)
 		}
 	}
-	attendees := make([]string, len(event.Attendees))
+	attendees := make([]CalendarAttendee, len(event.Attendees))
 	for i, attendee := range event.Attendees {
-		attendees[i] = attendee.Email
+		attendees[i] = CalendarAttendee{
+			Email:          attendee.Email,
+			ResponseStatus: attendee.ResponseStatus,
+		}
 	}
 	evt := CalendarEvent{
 		AnyoneCanAddSelf: event.AnyoneCanAddSelf,

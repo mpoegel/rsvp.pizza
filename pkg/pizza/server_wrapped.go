@@ -108,10 +108,10 @@ func (s *Server) GetWrapped(year int) (WrappedData, error) {
 	}
 	for _, event := range events {
 		for _, attendee := range event.Attendees {
-			if _, ok := data.Friends[attendee]; !ok {
-				data.Friends[attendee] = []time.Time{event.StartTime}
+			if _, ok := data.Friends[attendee.Email]; !ok {
+				data.Friends[attendee.Email] = []time.Time{event.StartTime}
 			} else {
-				data.Friends[attendee] = append(data.Friends[attendee], event.StartTime)
+				data.Friends[attendee.Email] = append(data.Friends[attendee.Email], event.StartTime)
 			}
 		}
 		data.TotalFridays++

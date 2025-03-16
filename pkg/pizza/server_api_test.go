@@ -103,7 +103,7 @@ func TestHandleApiGetFriday(t *testing.T) {
 	accessor.On("GetUpcomingFridays", 30).Return([]pizza.Friday{friday1}, nil)
 	accessor.On("GetFriendByEmail", "kirk").Return(pizza.Friend{ID: "1", Name: "Captain Kirk"}, nil)
 	event := pizza.CalendarEvent{
-		Attendees: []string{"kirk"},
+		Attendees: []pizza.CalendarAttendee{{Email: "kirk"}},
 	}
 	calendar.On("GetEvent", friday1ID).Return(event, nil)
 
@@ -206,7 +206,7 @@ func TestHandleApiPatchFriday(t *testing.T) {
 	accessor.On("GetFriendByEmail", mock.Anything).Return(pizza.Friend{ID: "2", Name: "Spock"}, nil)
 	calendar.On("InviteToEvent", reqFriday.ID, token.Claims.Email, token.Claims.GivenName).Return(nil)
 	event := pizza.CalendarEvent{
-		Attendees: []string{"spock"},
+		Attendees: []pizza.CalendarAttendee{{Email: "spock"}},
 	}
 	calendar.On("GetEvent", reqFriday.ID).Return(event, nil)
 
