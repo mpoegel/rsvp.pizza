@@ -238,22 +238,13 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			eventID := strconv.FormatInt(fData.ID, 10)
 			// get the calendar event to see who has already RSVP'ed
-			// TODO switch to using the local guest list instead of the calendar
-			if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
-				slog.Warn("failed to get calendar event", "error", err, "eventID", eventID)
-				fData.Guests = make([]string, 0)
-			} else if err != nil {
-				fData.Guests = make([]string, 0)
-			} else {
-				fData.Guests = make([]string, len(event.Attendees))
-				for k, attendee := range event.Attendees {
-					if friend, err := s.store.GetFriendByEmail(attendee.Email); err != nil {
-						fData.Guests[k] = attendee.Email
-					} else {
-						fData.Guests[k] = friend.Name
-					}
+			fData.Guests = make([]string, len(friday.Guests))
+			for k, attendee := range friday.Guests {
+				if friend, err := s.store.GetFriendByEmail(attendee); err != nil {
+					fData.Guests[k] = attendee
+				} else {
+					fData.Guests[k] = friend.Name
 				}
 			}
 			data.FridayTimes = append(data.FridayTimes, fData)

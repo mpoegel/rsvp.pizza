@@ -139,19 +139,14 @@ func (s *Server) HandleAPIGetFriday(accessToken *AccessToken, w http.ResponseWri
 			continue
 		}
 
-		// TODO use local guest list instead of remote calendar list
-		if event, err := s.calendar.GetEvent(id); err != nil && err != ErrEventNotFound {
-			slog.Warn("failed to get calendar event", "error", err, "eventID", id)
-		} else {
-			friday.Guests = make([]*api.Guest, 0)
-			for _, attendee := range event.Attendees {
-				if friend, err := s.store.GetFriendByEmail(attendee.Email); err == nil {
-					g := &api.Guest{
-						ID:   friend.ID,
-						Name: friend.Name,
-					}
-					friday.Guests = append(friday.Guests, g)
+		friday.Guests = make([]*api.Guest, len(f.Guests))
+		for i, attendee := range f.Guests {
+			if friend, err := s.store.GetFriendByEmail(attendee); err == nil {
+				g := &api.Guest{
+					ID:   friend.ID,
+					Name: friend.Name,
 				}
+				friday.Guests[i] = g
 			}
 		}
 

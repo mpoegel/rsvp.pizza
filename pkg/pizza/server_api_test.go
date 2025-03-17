@@ -13,7 +13,7 @@ import (
 	jsonapi "github.com/hashicorp/jsonapi"
 	api "github.com/mpoegel/rsvp.pizza/pkg/api"
 	pizza "github.com/mpoegel/rsvp.pizza/pkg/pizza"
-	"github.com/mpoegel/rsvp.pizza/pkg/types"
+	types "github.com/mpoegel/rsvp.pizza/pkg/types"
 	assert "github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 	require "github.com/stretchr/testify/require"
@@ -95,17 +95,13 @@ func TestHandleApiGetFriday(t *testing.T) {
 	friday1 := pizza.Friday{
 		Date:      time.Now(),
 		Details:   &details,
-		Guests:    []string{},
+		Guests:    []string{"kirk"},
 		MaxGuests: 10,
 		Enabled:   true,
 	}
 	friday1ID := strconv.FormatInt(friday1.Date.Unix(), 10)
 	accessor.On("GetUpcomingFridays", 30).Return([]pizza.Friday{friday1}, nil)
 	accessor.On("GetFriendByEmail", "kirk").Return(pizza.Friend{ID: "1", Name: "Captain Kirk"}, nil)
-	event := pizza.CalendarEvent{
-		Attendees: []pizza.CalendarAttendee{{Email: "kirk"}},
-	}
-	calendar.On("GetEvent", friday1ID).Return(event, nil)
 
 	server, err := pizza.NewServer(config, accessor, calendar, authenticator, metrics)
 	require.Nil(t, err)
@@ -164,7 +160,6 @@ func TestHandleApiGetFriday(t *testing.T) {
 
 	authenticator.AssertExpectations(t)
 	accessor.AssertExpectations(t)
-	calendar.AssertExpectations(t)
 }
 
 func TestHandleApiPatchFriday(t *testing.T) {
