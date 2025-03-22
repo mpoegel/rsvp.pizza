@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+                width="500"
+                height="500"
+                viewBox="0 0 500 500"
+                fill="none">
+<circle cx="250" cy="250" r="4" fill="none" stroke="black"/>
+<text x="250" y="246" fill="grey">0</text>
+<circle cx="250" cy="250" r="49" fill="none" stroke="black"/>
+<text x="250" y="201" fill="grey">2</text>
+<circle cx="250" cy="250" r="94" fill="none" stroke="black"/>
+<text x="250" y="156" fill="grey">4</text>
+<circle cx="250" cy="250" r="139" fill="none" stroke="black"/>
+<text x="250" y="111" fill="grey">6</text>
+<circle cx="250" cy="250" r="184" fill="none" stroke="black"/>
+<text x="250" y="66" fill="grey">8</text>
+<circle cx="388" cy="250" r="4" fill="green"/>
+<text x="449" y="250" fill="grey" text-anchor="start">apple</text>
+<circle cx="257" cy="271" r="4" fill="green"/>
+<text x="311" y="439" fill="grey" text-anchor="start">banana</text>
+<circle cx="101" cy="358" r="4" fill="green"/>
+<text x="89" y="366" fill="grey" text-anchor="end">strawberry</text>
+<circle cx="175" cy="195" r="4" fill="green"/>
+<text x="89" y="133" fill="grey" text-anchor="end">orange</text>
+<circle cx="299" cy="96" r="4" fill="green"/>
+<text x="311" y="60" fill="grey" text-anchor="start">pineapple</text>
+<path d=" M 388 250 L 257 271 101 358 175 195 299 96 Z" opacity="0.7" fill="green"/></svg>
