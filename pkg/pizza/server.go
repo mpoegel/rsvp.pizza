@@ -329,6 +329,10 @@ func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) e
 		return err
 	}
 
+	if !s.config.Calendar.Enabled {
+		return nil
+	}
+
 	err := s.calendar.InviteToEvent(ID, email, name)
 	if err != nil && err == ErrEventNotFound {
 		if err = s.calendar.CreateEvent(newEvent); err != nil {
@@ -388,10 +392,12 @@ func (s *Server) HandleDeleteRSVP(w http.ResponseWriter, r *http.Request) {
 				template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
 				return
 			}
-			if err = s.calendar.DeclineEvent(d, claims.Email); err != nil {
-				slog.Error("failed to decline calendar invite", "err", err, "email", claims.Email, "friday", d)
-				template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
-				return
+			if s.config.Calendar.Enabled {
+				if err = s.calendar.DeclineEvent(d, claims.Email); err != nil {
+					slog.Error("failed to decline calendar invite", "err", err, "email", claims.Email, "friday", d)
+					template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+					return
+				}
 			}
 		}
 	}

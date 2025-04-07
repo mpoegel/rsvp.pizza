@@ -37,6 +37,7 @@ type Config struct {
 }
 
 type CalendarConfig struct {
+	Enabled        bool   `yaml:"enabled"`
 	CredentialFile string `yaml:"credentialFile"`
 	TokenFile      string `yaml:"tokenFile"`
 	ID             string `yaml:"id"`
@@ -96,6 +97,7 @@ func LoadConfigEnv() Config {
 		WriteTimeout:    time.Duration(loadIntEnv("WRITE_TIMEOUT", 3)) * time.Second,
 		ShutdownTimeout: time.Duration(loadIntEnv("SHUTDOWN_TIMEOUT", 5)) * time.Second,
 		Calendar: CalendarConfig{
+			Enabled:        loadBoolEnv("ENABLE_CALENDAR", true),
 			CredentialFile: loadStrEnv("CREDENTIAL_FILE", "credentials.json"),
 			TokenFile:      loadStrEnv("TOKEN_FILE", "token.json"),
 			ID:             loadStrEnv("CALENDAR_ID", "primary"),
