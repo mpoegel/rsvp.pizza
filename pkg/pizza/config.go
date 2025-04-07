@@ -32,6 +32,8 @@ type Config struct {
 	MetricsPort     int            `yaml:"metricsPort"`
 	DBFile          string         `yaml:"dbFile"`
 	OAuth2          OAuth2Config
+	UseFileAuth     bool   `yaml:"useFileAuth"`
+	FakeAuthFile    string `yaml:"fakeAuthFile"`
 }
 
 type CalendarConfig struct {
@@ -107,5 +109,7 @@ func LoadConfigEnv() Config {
 			KeycloakURL:  loadStrEnv("KEYCLOAK_URL", "http://localhost:8080"),
 			Realm:        loadStrEnv("OAUTH2_REALM", "pizza"),
 		},
+		UseFileAuth:  loadBoolEnv("USE_FILE_AUTH", false),
+		FakeAuthFile: loadStrEnv("FAKE_AUTH_FILE", "configs/fake_user.json"),
 	}
 }

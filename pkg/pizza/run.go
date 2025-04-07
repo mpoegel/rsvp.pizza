@@ -26,14 +26,19 @@ func Run(args []string) error {
 		return err
 	}
 
-	keycloak, err := NewKeycloak(ctx, config.OAuth2)
-	if err != nil {
-		slog.Error("keycloak failure", "error", err)
-		return err
+	var authenticator Authenticator
+	if config.UseFileAuth {
+		authenticator = NewFileBasedAuth(config.FakeAuthFile)
+	} else {
+		authenticator, err = NewKeycloak(ctx, config.OAuth2)
+		if err != nil {
+			slog.Error("keycloak failure", "error", err)
+			return err
+		}
 	}
 
 	metricsReg := NewPrometheusRegistry()
-	server, err := NewServer(config, accessor, googleCal, keycloak, metricsReg)
+	server, err := NewServer(config, accessor, googleCal, authenticator, metricsReg)
 	if err != nil {
 		slog.Error("could not create server", "error", err)
 		os.Exit(1)

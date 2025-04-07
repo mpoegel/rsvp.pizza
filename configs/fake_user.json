@@ -1,0 +1,27 @@
+{
+    "exp": 0,
+    "iat": 0,
+    "auth_time": 1,
+    "jti": "",
+    "iss": "",
+    "aud": "",
+    "sub": "",
+    "typ": "",
+    "azp": "",
+    "session_state": "",
+    "at_hash": "",
+    "acr": "",
+    "sid": "",
+    "email_verified": true,
+    "name": "James T. Kirk",
+    "preferred_username": "jtk",
+    "given_name": "James",
+    "family_name": "Kirk",
+    "email": "kirk@starfleet.net",
+    "groups": [
+        "/host"
+    ],
+    "roles": [
+        "pizza_host"
+    ]
+}
