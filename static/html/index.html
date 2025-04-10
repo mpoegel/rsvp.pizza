@@ -3,7 +3,7 @@
 
 <head>
     <link rel="stylesheet" href="/static/css/index.css">
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
@@ -11,53 +11,48 @@
     <h2>RSVP For Pizza</h2>
 
     {{if .LoggedIn}}
-    {{template "PixelPizza" .PixelPizza}}
-    <p> Hi {{.Name}}</p>
+    <div id="header-bar">
+        <div id="greeting">Hi {{.Name}}</div>
+        <div id="nav">
+            <a href="/profile">profile</a>
+            {{if .IsAdmin}}
+            <a href="/admin">admin</a>
+            {{end}}
+            <a href="{{.LogoutURL}}">logout</a>
+            {{else}}
+            <a href="/login">login</a>
+            {{end}}
+        </div>
+    </div>
 
-    <table id="friday-table">
-        {{range .FridayTimes}}
-        <tr>
-            <td class="friday-time">
-                <label for="{{.Date}}">{{.Date}}</label><br>
-                <div class="guest-level" onclick="expandGuests(this);">
-                    {{range .Guests}}
-                    <div class="guest" title="{{.}}">
-                        <span class="guest-box"></span>
-                        <div class="guest-name">{{.}}</div>
+    <div id="new-friday-table">
+        <div id="new-friday-list">
+            {{range .FridayTimes}}
+            <div class="friday-link" hx-get="/friday/{{.ID}}" hx-swap="innerHTML" hx-target="#new-friday-selected">
+                <div class="new-friday-time">
+                    <div class="new-friday-time-header">
+                        {{if .IsInvited}}
+                        <span class="invite-symbol-yes">&#x2713;</span>
+                        {{else}}
+                        <span class="invite-symbol-no">&#x025EF;</span>
+                        {{end}}
+                        {{.ShortDate}}
                     </div>
-                    {{end}}
+                    <div class="guest-level">
+                        {{range .Guests}}
+                        <div class="guest" title="{{.}}">
+                            <span class="guest-box"></span>
+                        </div>
+                        {{end}}
+                    </div>
                 </div>
-                <span class="friday-details"><i>{{.Details}}</i></span>
-                <div class="btn-rsvp">
-                    {{if .IsInvited}}
-                    <span>You're invited!
-                        <button class="btn" hx-delete="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
-                            hx-swap="innerHTML">Decline</button>
-                    </span>
-                    {{else if ge (len .Guests) .MaxGuests}}
-                    <span>Event is full.</span>
-                    {{else}}
-                    <span class="num-of-guests">{{len .Guests}} of {{ .MaxGuests }}</span>
-                    <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
-                        hx-swap="innerHTML">RSVP</button>
-                    {{end}}
-                </div>
-            </td>
-        </tr>
-        {{end}}
-    </table>
-
-    <br><br>
-    <a href="/profile">profile</a>
-
-    {{if .IsAdmin}}
-    <a href="/admin">admin</a>
-    {{end}}
-    <a href="{{.LogoutURL}}">logout</a>
-
-    {{else}}
-    <a href="/login">login</a>
-    {{end}}
+            </div>
+            {{end}}
+        </div>
+        <div id="new-friday-selected">
+            {{template "SelectedFriday" index .FridayTimes 0}}
+        </div>
+    </div>
 
 </body>
 <script src="/static/js/index.js"></script>

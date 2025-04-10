@@ -72,6 +72,7 @@ func NewServer(config Config, accessor Accessor, calendar Calendar, auth Authent
 
 func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /", s.HandleIndex)
+	mux.HandleFunc("GET /friday/{ID}", s.HandleFridayPartial)
 	mux.HandleFunc("POST /rsvp", s.HandleRSVP)
 	mux.HandleFunc("DELETE /rsvp", s.HandleDeleteRSVP)
 	mux.HandleFunc("GET /wrapped", s.HandledWrapped)
@@ -146,6 +147,7 @@ func (s *Server) WatchCalendar(period time.Duration) {
 
 type IndexFridayData struct {
 	Date      string
+	ShortDate string
 	ID        int64
 	Guests    []string
 	Active    bool
@@ -222,6 +224,7 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 			fData := IndexFridayData{
 				MaxGuests: friday.MaxGuests,
+				ShortDate: fmt.Sprintf("%s %d", friday.Date.Month().String(), friday.Date.Day()),
 			}
 			t := friday.Date
 			t = t.In(estZone)
@@ -252,6 +255,77 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = plate.Execute(w, data); err != nil {
+		slog.Error("template execution failure", "error", err)
+		s.Handle500(w, r)
+		return
+	}
+}
+
+func (s *Server) HandleFridayPartial(w http.ResponseWriter, r *http.Request) {
+	claims, ok := s.authenticateRequest(r)
+	if !ok {
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+		return
+	}
+	plate, err := template.ParseGlob(path.Join(s.config.StaticDir, "html/snippets/*.html"))
+	if err != nil {
+		slog.Error("template snippets parse failure", "error", err)
+		s.Handle500(w, r)
+		return
+	}
+	d := r.PathValue("ID")
+	num, err := strconv.ParseInt(d, 10, 64)
+	if err != nil {
+		slog.Error("failed parsing date int from rsvp form", "date", d)
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+		return
+	}
+	estZone, _ := time.LoadLocation("America/New_York")
+	friday, err := s.store.GetFriday(time.Unix(num, 0).In(estZone))
+	if err != nil {
+		// friday does not exist
+		slog.Info("friday does not exist", "error", err)
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+		return
+	}
+
+	if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
+		// not part of invited group OR friday not enabled
+		slog.Info("friday not enabled or claims check")
+		template.Must(template.ParseFiles(path.Join(s.config.StaticDir, "html/snippets/rsvp_fail.html"))).Execute(w, nil)
+		return
+	}
+
+	fData := IndexFridayData{
+		MaxGuests: friday.MaxGuests,
+		ShortDate: fmt.Sprintf("%s %d", friday.Date.Month().String(), friday.Date.Day()),
+	}
+	t := friday.Date
+	t = t.In(estZone)
+	fData.Date = t.Format(time.RFC822)
+	fData.ID = t.Unix()
+	if friday.Details != nil {
+		fData.Details = *friday.Details
+	}
+	// add indicator if guest has already RSVP'ed for this friday
+	fData.IsInvited = false
+	for _, guest := range friday.Guests {
+		if guest == claims.Email {
+			fData.IsInvited = true
+		}
+	}
+
+	// get the calendar event to see who has already RSVP'ed
+	fData.Guests = make([]string, len(friday.Guests))
+	for k, attendee := range friday.Guests {
+		if friend, err := s.store.GetFriendByEmail(attendee); err != nil {
+			fData.Guests[k] = attendee
+		} else {
+			fData.Guests[k] = friend.Name
+		}
+	}
+
+	if err = plate.ExecuteTemplate(w, "SelectedFriday", fData); err != nil {
 		slog.Error("template execution failure", "error", err)
 		s.Handle500(w, r)
 		return

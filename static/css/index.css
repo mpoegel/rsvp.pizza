@@ -1,5 +1,5 @@
 body {
-    background-color: darkblue;
+    background-color: #1F2024;
     font-family: 'Courier New', Courier, monospace;
     color: white;
     margin: auto;
@@ -25,9 +25,9 @@ a {
 
 .guest-level {
     text-align: left;
-    width: 75%;
+    /* width: 75%; */
     display: flex;
-    cursor: pointer;
+    /* cursor: pointer; */
 }
 
 .guest-box {
@@ -36,7 +36,7 @@ a {
     min-height: 3px;
     height: 10px;
     padding: 3px 3px;
-    background-color: darkgreen;
+    background-color: #A68F97;
     display: inline-block;
     margin: 1px;
 }
@@ -52,7 +52,7 @@ a {
     display: flex;
     flex-direction: column;
     animation-duration: 2s;
-    cursor: pointer;
+    /* cursor: pointer; */
 }
 
 .guest-expanded {
@@ -122,7 +122,7 @@ a {
 }
 
 .preference :checked+span {
-    background: darkgreen;
+    background: #004F4D;
 }
 
 @media (max-width: 600px) {
@@ -156,6 +156,95 @@ a {
     .guestLevel {
         width: 80%;
     }
+
+    #new-friday-table {
+        flex-wrap: wrap;
+    }
+
+    #new-friday-list {
+        flex-basis: 100% !important;
+        display: flex;
+    }
+
+    #new-friday-selected {
+        flex-basis: 100% !important;
+        margin-top: 40px
+    }
+
+    #new-friday-list .new-friday-time {
+        min-height: 100%;
+    }
+
+    .friday-link {
+        flex-basis: 25%;
+    }
+
+    .invite-symbol-no,
+    .invite-symbol-yes {
+        display: block;
+    }
+}
+
+#header-bar {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+#greeting {
+    flex-basis: 50%;
+}
+
+#nav {
+    flex-basis: 50%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+#nav a {
+    margin-left: 10px;
+}
+
+#new-friday-table {
+    display: flex;
+}
+
+#new-friday-list {
+    flex-basis: 25%;
+}
+
+#new-friday-selected {
+    flex-basis: 75%;
+    padding: 5px;
+    padding-left: 20px;
+}
+
+.new-friday-time {
+    border: 1px solid black;
+    background-color: #4B4952;
+    padding: 5px;
+}
+
+.invite-symbol-yes {
+    font-size: 24px;
+    color: #A68F97;
+}
+
+.invite-symbol-no {
+    font-size: 24px;
+    color: darkgray;
+}
+
+.friday-link {
+    cursor: pointer;
+}
+
+.btn-rsvp .btn {
+    width: 100px;
+    font-size: 1.1em;
+    background-color: #004F4D;
+    color: white;
+    cursor: pointer;
+    border: none;
 }
 
 @media (min-width: 601px) {

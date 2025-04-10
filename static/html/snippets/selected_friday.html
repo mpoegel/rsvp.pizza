@@ -1,0 +1,30 @@
+{{define "SelectedFriday"}}
+
+<h3>{{.Date}}</h3>
+
+<p class="friday-details">{{.Details}}</p>
+
+<div class="guest-level-expanded">
+    {{range .Guests}}
+    <div class="guest-expanded" title="{{.}}">
+        <span class="guest-box"></span>
+        <div class="guest-name-expanded">{{.}}</div>
+    </div>
+    {{end}}
+</div>
+
+<div class="btn-rsvp">
+    {{if .IsInvited}}
+    <p>You're invited!
+        <button class="btn" hx-delete="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
+            hx-swap="innerHTML">Decline</button>
+    </p>
+    {{else if ge (len .Guests) .MaxGuests}}
+    <span>Event is full.</span>
+    {{else}}
+    <span class="num-of-guests">{{len .Guests}} of {{ .MaxGuests }}</span>
+    <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp" hx-swap="innerHTML">RSVP</button>
+    {{end}}
+</div>
+
+{{end}}
