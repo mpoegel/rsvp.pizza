@@ -32,9 +32,9 @@
                 <div class="new-friday-time">
                     <div class="new-friday-time-header">
                         {{if .IsInvited}}
-                        <span class="invite-symbol-yes">&#x2713;</span>
+                        <img class="rsvp-status" src="/static/images/happy_pizza.webp" alt="RSVP Yes">
                         {{else}}
-                        <span class="invite-symbol-no">&#x025EF;</span>
+                        <img class="rsvp-status rsvp-status-no" src="/static/images/sleepy_pizza.webp" alt="RSVP No">
                         {{end}}
                         {{.ShortDate}}
                     </div>

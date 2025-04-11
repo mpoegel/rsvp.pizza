@@ -36,7 +36,7 @@ a {
     min-height: 3px;
     height: 10px;
     padding: 3px 3px;
-    background-color: #A68F97;
+    background-color: #FFEFAE;
     display: inline-block;
     margin: 1px;
 }
@@ -247,10 +247,18 @@ a {
     border: none;
 }
 
+img.rsvp-status {
+    width: 64px;
+}
+
+img.rsvp-status-no {
+    filter: grayscale(60%);
+}
+
 @media (min-width: 601px) {
     body {
         font-size: 1.0em;
-        width: 600px;
+        width: 800px;
     }
 
     #friday-table {
