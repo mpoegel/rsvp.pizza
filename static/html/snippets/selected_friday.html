@@ -28,6 +28,15 @@
     {{end}}
 </div>
 
+{{if and .IsInvited .CanPlusOne}}
+<div class="btn-remove">
+    <input class="friday-input" type="text" name="plus-one" placeholder="+1" size="20">
+    <button class="btn" hx-post="/x/rsvp?date={{.ID}}" hx-target="next .toast" hx-swap="outerHTML settle:3s"
+        hx-include="previous input">Invite</button>
+    <span class="toast"></span>
+</div>
+{{end}}
+
 {{if .CanEdit}}
 <div class="btn-edit">
     <button class="btn" hx-get="/x/friday/{{.ID}}/edit" hx-target="#new-friday-selected"

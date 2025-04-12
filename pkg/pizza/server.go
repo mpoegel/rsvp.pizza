@@ -149,16 +149,17 @@ func (s *Server) WatchCalendar(period time.Duration) {
 }
 
 type IndexFridayData struct {
-	Date      string
-	ShortDate string
-	ID        int64
-	Guests    []Friend
-	Active    bool
-	Group     string
-	Details   string
-	IsInvited bool
-	MaxGuests int
-	CanEdit   bool
+	Date       string
+	ShortDate  string
+	ID         int64
+	Guests     []Friend
+	Active     bool
+	Group      string
+	Details    string
+	IsInvited  bool
+	MaxGuests  int
+	CanEdit    bool
+	CanPlusOne bool
 }
 
 type PageData struct {
@@ -368,10 +369,11 @@ func (s *Server) loadAllFridays() ([]Friday, error) {
 
 func (s *Server) newIndexFridayData(friday *Friday, claims *TokenClaims) *IndexFridayData {
 	fData := IndexFridayData{
-		MaxGuests: friday.MaxGuests,
-		ShortDate: fmt.Sprintf("%s %d", friday.Date.Month().String(), friday.Date.Day()),
-		CanEdit:   claims.HasRole("pizza_host"),
-		Active:    friday.Enabled,
+		MaxGuests:  friday.MaxGuests,
+		ShortDate:  fmt.Sprintf("%s %d", friday.Date.Month().String(), friday.Date.Day()),
+		CanEdit:    claims.HasRole("pizza_host"),
+		CanPlusOne: claims.HasRole("pizza_host") || claims.HasRole("plusOne"),
+		Active:     friday.Enabled,
 	}
 	// TODO load timezone once somewhere
 	estZone, _ := time.LoadLocation("America/New_York")

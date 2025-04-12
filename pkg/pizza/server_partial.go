@@ -54,7 +54,27 @@ func (s *Server) HandleRSVP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := strings.ToLower(claims.Email)
-	slog.Debug("rsvp request", "email", email, "dates", dates)
+
+	if err := r.ParseForm(); err != nil {
+		slog.Error("form parse failure on rsvp", "error", err)
+		w.Write(getToast("bad request"))
+		return
+	}
+	if len(r.Form["plus-one"]) > 0 {
+		if !claims.HasRole("plusOne") && !claims.HasRole("pizza_host") {
+			s.executeTemplate(w, "RSVPError", nil)
+			return
+		}
+		email = r.Form["plus-one"][0]
+		friend, err := s.store.GetFriendByEmail(email)
+		if err != nil {
+			w.Write(getToast("friend not found"))
+			return
+		}
+		slog.Info("rsvp request", "name", friend.Name, "dates", dates, "by", claims.Email)
+	} else {
+		slog.Debug("rsvp request", "email", email, "dates", dates)
+	}
 
 	for _, d := range dates {
 		fridayTime, err := parseFridayTime(d)
