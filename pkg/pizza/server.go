@@ -83,6 +83,10 @@ func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /x/friday/{ID}", s.HandleFriday)
 	mux.HandleFunc("POST /x/rsvp", s.HandleRSVP)
 	mux.HandleFunc("DELETE /x/rsvp", s.HandleDeleteRSVP)
+	mux.HandleFunc("GET /x/friday/{ID}/edit", s.HandleFridayGetEdit)
+	mux.HandleFunc("POST /x/friday/{ID}/edit", s.HandleFridaySaveEdit)
+	mux.HandleFunc("POST /x/friday/{ID}/enable", s.HandleFridayEnable)
+	mux.HandleFunc("POST /x/friday/{ID}/disable", s.HandleFridayDisable)
 
 	mux.HandleFunc("GET /profile", s.HandleGetProfile)
 	mux.HandleFunc("POST /profile/edit", s.HandleUpdateProfile)
@@ -150,12 +154,13 @@ type IndexFridayData struct {
 	Date      string
 	ShortDate string
 	ID        int64
-	Guests    []string
+	Guests    []Friend
 	Active    bool
 	Group     string
 	Details   string
 	IsInvited bool
 	MaxGuests int
+	CanEdit   bool
 }
 
 type PageData struct {
@@ -195,22 +200,19 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			data.PixelPizza.Size = "12px"
 		}
 
-		fridays, err := s.store.GetUpcomingFridays(30)
+		fridays, err := s.loadAllFridays()
 		if err != nil {
 			slog.Error("failed to get fridays", "error", err)
 			s.Handle500(w, r)
 			return
 		}
-
 		data.FridayTimes = make([]IndexFridayData, 0)
 		for _, friday := range fridays {
-			if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
-				// skip friday when the user is not in the invited group
-				// also skip fridays that are disabled
-				continue
+			if claims.HasRole("pizza_host") || friday.Group == nil || (friday.Group != nil && claims.InGroup(*friday.Group)) {
+				// skip friday when the user is not in the invited group unless they are the host
+				fData := s.newIndexFridayData(&friday, claims)
+				data.FridayTimes = append(data.FridayTimes, *fData)
 			}
-			fData := s.newIndexFridayData(&friday, claims)
-			data.FridayTimes = append(data.FridayTimes, *fData)
 		}
 	}
 
@@ -230,6 +232,10 @@ func (s *Server) CreateAndInvite(ID string, friday Friday, email, name string) e
 		Status:                "confirmed",
 		Summary:               "Pizza Friday",
 		Visibility:            "private",
+	}
+
+	if len(friday.Guests) >= friday.MaxGuests {
+		return ErrFridayIsFull
 	}
 
 	// update local table with new guest list
@@ -308,38 +314,66 @@ func (s *Server) Handle500(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var (
-	ErrFridayNotFound = errors.New("friday not found")
-)
-
-func (s *Server) loadFriday(fridayID string, claims *TokenClaims) (*Friday, error) {
+func parseFridayTime(fridayID string) (time.Time, error) {
 	num, err := strconv.ParseInt(fridayID, 10, 64)
 	if err != nil {
 		slog.Error("failed parsing date int from rsvp form", "date", fridayID)
-		return nil, ErrFridayNotFound
+		return time.Time{}, err
 	}
 	// TODO load timezone once somewhere
 	estZone, _ := time.LoadLocation("America/New_York")
-	friday, err := s.store.GetFriday(time.Unix(num, 0).In(estZone))
+	return time.Unix(num, 0).In(estZone), nil
+}
+
+var (
+	ErrFridayNotFound = errors.New("friday not found")
+	ErrFridayIsFull   = errors.New("friday is full")
+)
+
+func (s *Server) loadFriday(fridayTime time.Time, claims *TokenClaims) (*Friday, error) {
+	friday, err := s.store.GetFriday(fridayTime)
 	if err != nil {
 		// friday does not exist
-		slog.Info("friday does not exist", "error", err)
 		return nil, ErrFridayNotFound
 	}
 
-	if (friday.Group != nil && !claims.InGroup(*friday.Group)) || !friday.Enabled {
-		// not part of invited group OR friday not enabled
-		slog.Info("friday not enabled or claims check")
+	if !claims.HasRole("pizza_host") && (friday.Group != nil && !claims.InGroup(*friday.Group)) {
+		// not part of invited group
 		return nil, ErrFridayNotFound
 	}
 
 	return &friday, nil
 }
 
+func (s *Server) loadAllFridays() ([]Friday, error) {
+	allFridayTimes := getFutureFridays()
+	setFridays, err := s.store.GetUpcomingFridays(futureFridayLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	fridayIndex := 0
+	result := make([]Friday, 0)
+	for _, fridayTime := range allFridayTimes {
+		if fridayIndex < len(setFridays) && fridayTime.Equal(setFridays[fridayIndex].Date) {
+			result = append(result, setFridays[fridayIndex])
+			fridayIndex++
+		} else {
+			result = append(result, Friday{
+				Date:   fridayTime,
+				Guests: make([]string, 0),
+			})
+		}
+	}
+	return result, nil
+}
+
 func (s *Server) newIndexFridayData(friday *Friday, claims *TokenClaims) *IndexFridayData {
 	fData := IndexFridayData{
 		MaxGuests: friday.MaxGuests,
 		ShortDate: fmt.Sprintf("%s %d", friday.Date.Month().String(), friday.Date.Day()),
+		CanEdit:   claims.HasRole("pizza_host"),
+		Active:    friday.Enabled,
 	}
 	// TODO load timezone once somewhere
 	estZone, _ := time.LoadLocation("America/New_York")
@@ -350,6 +384,9 @@ func (s *Server) newIndexFridayData(friday *Friday, claims *TokenClaims) *IndexF
 	if friday.Details != nil {
 		fData.Details = *friday.Details
 	}
+	if friday.Group != nil {
+		fData.Group = *friday.Group
+	}
 	// add indicator if guest has already RSVP'ed for this friday
 	fData.IsInvited = false
 	for _, guest := range friday.Guests {
@@ -358,12 +395,12 @@ func (s *Server) newIndexFridayData(friday *Friday, claims *TokenClaims) *IndexF
 		}
 	}
 
-	fData.Guests = make([]string, len(friday.Guests))
+	fData.Guests = make([]Friend, len(friday.Guests))
 	for k, attendee := range friday.Guests {
-		if friend, err := s.store.GetFriendByEmail(attendee); err != nil {
-			fData.Guests[k] = attendee
-		} else {
-			fData.Guests[k] = friend.Name
+		fData.Guests[k].Email = attendee
+		if friend, err := s.store.GetFriendByEmail(attendee); err == nil {
+			fData.Guests[k].Name = friend.Name
+			fData.Guests[k].ID = friend.ID
 		}
 	}
 

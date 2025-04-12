@@ -84,14 +84,16 @@ func TestHandleSubmit(t *testing.T) {
 	}
 	authenticator.On("IsValidSession", mock.Anything).Return(claims, true)
 	friday1 := pizza.Friday{
-		Date:    time.Unix(1672060005, 0).In(estZone),
-		Group:   &groupName,
-		Enabled: true,
+		Date:      time.Unix(1672060005, 0).In(estZone),
+		Group:     &groupName,
+		Enabled:   true,
+		MaxGuests: 5,
 	}
 	friday2 := pizza.Friday{
-		Date:    time.Unix(1672040005, 0).In(estZone),
-		Group:   &groupName,
-		Enabled: true,
+		Date:      time.Unix(1672040005, 0).In(estZone),
+		Group:     &groupName,
+		Enabled:   true,
+		MaxGuests: 5,
 	}
 	accessor.On("GetFriday", friday1.Date).Return(friday1, nil)
 	accessor.On("GetFriday", friday2.Date).Return(friday2, nil)
@@ -106,7 +108,7 @@ func TestHandleSubmit(t *testing.T) {
 	server.LoadRoutes(mux)
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
-	url := fmt.Sprintf("%s/rsvp?date=1672060005&date=1672040005", ts.URL)
+	url := fmt.Sprintf("%s/x/rsvp?date=1672060005&date=1672040005", ts.URL)
 
 	// WHEN
 	req, err := http.NewRequest(http.MethodPost, url, nil)

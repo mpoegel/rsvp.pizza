@@ -183,6 +183,17 @@ a {
     .invite-symbol-yes {
         display: block;
     }
+
+    .friday-input[type="text"],
+    .friday-input[type="number"] {
+        margin-bottom: 10px;
+        border-bottom: 4px solid #1F2024;
+        font-family: 'Courier New', Courier, monospace;
+        margin-right: 18px !important;
+        font-size: 0.8em;
+
+    }
+
 }
 
 #header-bar {
@@ -253,12 +264,48 @@ a {
     border: none;
 }
 
+.btn-edit .btn {
+    width: 100px;
+    font-size: 1.1em;
+    background-color: firebrick;
+    color: white;
+    cursor: pointer;
+    border: none;
+    margin-top: 50px;
+}
+
 img.rsvp-status {
     width: 64px;
 }
 
 img.rsvp-status-no {
     filter: grayscale(60%);
+}
+
+.friday-input[type="text"],
+.friday-input[type="number"] {
+    margin-bottom: 10px;
+    border-bottom: 4px solid #1F2024;
+    font-family: 'Courier New', Courier, monospace;
+    margin-right: 5px;
+}
+
+.friday-input[type="text"]:focus,
+.friday-input[type="text"]:hover,
+.friday-input[type="number"]:focus,
+.friday-input[type="number"]:hover {
+    border-bottom: 4px solid goldenrod;
+    outline: none;
+}
+
+.btn-remove .btn {
+    width: 100px;
+    font-size: 1.1em;
+    background-color: goldenrod;
+    color: white;
+    cursor: pointer;
+    border: none;
+    margin: 5px 0px;
 }
 
 @media (min-width: 601px) {

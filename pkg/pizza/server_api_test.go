@@ -191,10 +191,11 @@ func TestHandleApiPatchFriday(t *testing.T) {
 	}
 	authenticator.On("DecodeAccessToken", mock.Anything, "token").Return(token, nil)
 	friday := pizza.Friday{
-		Date:    fTime.In(estZone),
-		Group:   &groupName,
-		Enabled: true,
-		Details: &details,
+		Date:      fTime.In(estZone),
+		Group:     &groupName,
+		Enabled:   true,
+		Details:   &details,
+		MaxGuests: 5,
 	}
 	accessor.On("GetFriday", friday.Date).Return(friday, nil)
 	accessor.On("AddFriendToFriday", token.Claims.Email, friday).Return(nil)

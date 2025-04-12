@@ -26,10 +26,16 @@
         </div>
     </div>
 
-    <!-- hx-swap="innerHTML" hx-target="#new-friday-selected" role="tab" -->
+    {{if eq (len .FridayTimes) 0}}
+    <p>
+        <img class="rsvp-status" src="/static/images/sleepy_pizza.webp" alt="no pizza">
+        No upcoming Pizza Fridays.
+    </p>
+    {{else}}
     <div id="new-friday-table">
         <div id="new-friday-list">
             {{range $index, $element := .FridayTimes}}
+            {{if $element.Active }}
             <div class="friday-link {{if eq $index 0}}selected-friday-link{{end}}" hx-get="/x/friday/{{$element.ID}}"
                 hx-swap="innerHTML" hx-target="#new-friday-selected" onclick="selectFriday(this)">
                 <div class="new-friday-time">
@@ -43,19 +49,31 @@
                     </div>
                     <div class="guest-level">
                         {{range $element.Guests}}
-                        <div class="guest" title="{{.}}">
+                        <div class="guest" title="{{.Name}}">
                             <span class="guest-box"></span>
                         </div>
                         {{end}}
                     </div>
                 </div>
             </div>
+            {{else if $element.CanEdit}}
+            <div class="friday-link {{if eq $index 0}}selected-friday-link{{end}}" hx-get="/x/friday/{{$element.ID}}"
+                hx-swap="innerHTML" hx-target="#new-friday-selected" onclick="selectFriday(this)">
+                <div class="new-friday-time">
+                    <div class="new-friday-time-header">
+                        <img class="rsvp-status rsvp-status-no" src="/static/images/blank_pizza.webp" alt="inactive">
+                        {{$element.ShortDate}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
             {{end}}
         </div>
         <div id="new-friday-selected">
             {{template "SelectedFriday" index .FridayTimes 0}}
         </div>
     </div>
+    {{end}}
 
 </body>
 <script src="/static/js/index.js"></script>

@@ -6,13 +6,14 @@
 
 <div class="guest-level-expanded">
     {{range .Guests}}
-    <div class="guest-expanded" title="{{.}}">
+    <div class="guest-expanded" title="{{.Name}}">
         <span class="guest-box"></span>
-        <div class="guest-name-expanded">{{.}}</div>
+        <div class="guest-name-expanded">{{.Name}}</div>
     </div>
     {{end}}
 </div>
 
+{{if .Active}}
 <div class="btn-rsvp">
     {{if .IsInvited}}
     <p>You're invited!
@@ -20,11 +21,24 @@
             hx-swap="innerHTML">Decline</button>
     </p>
     {{else if ge (len .Guests) .MaxGuests}}
-    <span>Event is full.</span>
+    <p>Event is full.</p>
     {{else}}
     <span class="num-of-guests">{{len .Guests}} of {{ .MaxGuests }}</span>
     <button class="btn" hx-post="/x/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp" hx-swap="innerHTML">RSVP</button>
     {{end}}
 </div>
+
+{{if .CanEdit}}
+<div class="btn-edit">
+    <button class="btn" hx-get="/x/friday/{{.ID}}/edit" hx-target="#new-friday-selected"
+        hx-swap="innerHTML">Edit</button>
+</div>
+{{end}}
+{{else}}
+<div class="btn-edit">
+    <button class="btn" hx-post="/x/friday/{{.ID}}/enable" hx-target="#new-friday-selected"
+        hx-swap="innerHTML">Enable</button>
+</div>
+{{end}}
 
 {{end}}

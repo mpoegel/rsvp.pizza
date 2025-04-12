@@ -1,0 +1,31 @@
+{{define "SelectedFridayEdit"}}
+
+<h3>{{.Date}}</h3>
+
+<input class="friday-input" type="text" name="details" placeholder="details" value="{{.Details}}" size="30"><br>
+<input class="friday-input" type="text" name="group" placeholder="group" value="{{.Group}}" size="20">
+<input class="friday-input" name="maxGuests" type="number" value="{{.MaxGuests}}" size="5"><br><br>
+
+<div class="guest-level-expanded">
+    {{with $friday := .}}
+    {{range $friday.Guests}}
+    <div class="guest-expanded" title="{{.Name}}">
+        <div class="btn-remove">
+            <button class="btn" hx-delete="/x/rsvp?date={{ $friday.ID }}&guest={{.Email}}"
+                hx-target="closest .btn-remove" hx-swap="innerHTML">Remove</button>
+            <span>{{.Name}}</span>
+        </div>
+    </div>
+    {{end}}
+    {{end}}
+</div>
+
+<div class="btn-edit">
+    <button class="btn" hx-post="/x/friday/{{.ID}}/edit" hx-target="#new-friday-selected" hx-swap="innerHTML"
+        hx-include="#new-friday-selected">Save</button>
+    <button class="btn" hx-post="/x/friday/{{.ID}}/disable" hx-target="#new-friday-selected"
+        hx-swap="innerHTML">Disable</button>
+    <button class="btn" hx-get="/x/friday/{{.ID}}" hx-target="#new-friday-selected" hx-swap="innerHTML">Cancel</button>
+</div>
+
+{{end}}

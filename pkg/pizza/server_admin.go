@@ -93,16 +93,16 @@ func (s *Server) HandleAdmin(w http.ResponseWriter, r *http.Request) {
 		eventID := strconv.FormatInt(f.ID, 10)
 		if event, err := s.calendar.GetEvent(eventID); err != nil && err != ErrEventNotFound {
 			slog.Warn("failed to get calendar event", "error", err, "eventID", eventID)
-			f.Guests = make([]string, 0)
+			f.Guests = make([]Friend, 0)
 		} else if err != nil {
-			f.Guests = make([]string, 0)
+			f.Guests = make([]Friend, 0)
 		} else {
-			f.Guests = make([]string, len(event.Attendees))
+			f.Guests = make([]Friend, len(event.Attendees))
 			for k, attendee := range event.Attendees {
 				if friend, err := s.store.GetFriendByEmail(attendee.Email); err != nil {
-					f.Guests[k] = attendee.Email
+					f.Guests[k].Email = attendee.Email
 				} else {
-					f.Guests[k] = friend.Name
+					f.Guests[k].Name = friend.Name
 				}
 			}
 		}

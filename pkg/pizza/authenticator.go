@@ -74,7 +74,7 @@ func (c *TokenClaims) HasRole(role string) bool {
 }
 
 func (c *TokenClaims) InGroup(group string) bool {
-	return slices.Contains(c.Groups, group)
+	return group == "" || slices.Contains(c.Groups, group)
 }
 
 type IDToken struct {
