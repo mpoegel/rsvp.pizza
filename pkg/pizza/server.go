@@ -75,8 +75,6 @@ func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /login", s.HandleLogin)
 	mux.HandleFunc("GET /login/callback", s.HandleLoginCallback)
 	mux.HandleFunc("GET /logout", s.HandleLogout)
-	mux.HandleFunc("GET /admin", s.HandleAdmin)
-	mux.HandleFunc("POST /admin/edit", s.HandleAdminEdit)
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(s.config.StaticDir))))
 
@@ -433,4 +431,26 @@ func (s *Server) executeTemplate(w http.ResponseWriter, name string, data any) {
 		slog.Error("template execution failure", "name", name, "error", err, "data", data)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+const futureFridayLimit = 30
+
+func getFutureFridays() []time.Time {
+	dates := make([]time.Time, 0)
+	loc, _ := time.LoadLocation("America/New_York")
+	start := time.Now()
+	friday := time.Date(start.Year(), start.Month(), start.Day(), 17, 30, 0, 0, loc)
+	for friday.Weekday() != time.Friday {
+		friday = friday.AddDate(0, 0, 1)
+	}
+	endDate := time.Now().AddDate(0, 0, futureFridayLimit)
+	for friday.Before(endDate) {
+		dates = append(dates, friday)
+		friday = friday.AddDate(0, 0, 7)
+	}
+	return dates
+}
+
+func getToast(msg string) []byte {
+	return []byte(fmt.Sprintf(`<span class="toast">%s</span>`, msg))
 }

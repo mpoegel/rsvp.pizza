@@ -16,9 +16,6 @@
         <div id="greeting">Hi {{.Name}}</div>
         <div id="nav">
             <a href="/profile">profile</a>
-            {{if .IsAdmin}}
-            <a href="/admin">admin</a>
-            {{end}}
             <a href="{{.LogoutURL}}">logout</a>
             {{else}}
             <a href="/login">login</a>
