@@ -1,3 +1,4 @@
+{{define "Index"}}
 <!DOCTYPE html>
 <html>
 
@@ -25,21 +26,23 @@
         </div>
     </div>
 
+    <!-- hx-swap="innerHTML" hx-target="#new-friday-selected" role="tab" -->
     <div id="new-friday-table">
         <div id="new-friday-list">
-            {{range .FridayTimes}}
-            <div class="friday-link" hx-get="/friday/{{.ID}}" hx-swap="innerHTML" hx-target="#new-friday-selected">
+            {{range $index, $element := .FridayTimes}}
+            <div class="friday-link {{if eq $index 0}}selected-friday-link{{end}}" hx-get="/x/friday/{{$element.ID}}"
+                hx-swap="innerHTML" hx-target="#new-friday-selected" onclick="selectFriday(this)">
                 <div class="new-friday-time">
                     <div class="new-friday-time-header">
-                        {{if .IsInvited}}
+                        {{if $element.IsInvited}}
                         <img class="rsvp-status" src="/static/images/happy_pizza.webp" alt="RSVP Yes">
                         {{else}}
                         <img class="rsvp-status rsvp-status-no" src="/static/images/sleepy_pizza.webp" alt="RSVP No">
                         {{end}}
-                        {{.ShortDate}}
+                        {{$element.ShortDate}}
                     </div>
                     <div class="guest-level">
-                        {{range .Guests}}
+                        {{range $element.Guests}}
                         <div class="guest" title="{{.}}">
                             <span class="guest-box"></span>
                         </div>
@@ -58,3 +61,4 @@
 <script src="/static/js/index.js"></script>
 
 </html>
+{{end}}

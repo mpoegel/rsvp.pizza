@@ -36,7 +36,7 @@ a {
     min-height: 3px;
     height: 10px;
     padding: 3px 3px;
-    background-color: #FFEFAE;
+    background-color: goldenrod;
     display: inline-block;
     margin: 1px;
 }
@@ -220,7 +220,7 @@ a {
 
 .new-friday-time {
     border: 1px solid black;
-    background-color: #4B4952;
+    /* background-color: #4B4952; */
     padding: 5px;
 }
 
@@ -236,6 +236,12 @@ a {
 
 .friday-link {
     cursor: pointer;
+    background-color: #4B4952;
+}
+
+.selected-friday-link {
+    border-top: 7px solid goldenrod;
+    font-weight: bold;
 }
 
 .btn-rsvp .btn {

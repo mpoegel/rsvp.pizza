@@ -16,14 +16,14 @@
 <div class="btn-rsvp">
     {{if .IsInvited}}
     <p>You're invited!
-        <button class="btn" hx-delete="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
+        <button class="btn" hx-delete="/x/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp"
             hx-swap="innerHTML">Decline</button>
     </p>
     {{else if ge (len .Guests) .MaxGuests}}
     <span>Event is full.</span>
     {{else}}
     <span class="num-of-guests">{{len .Guests}} of {{ .MaxGuests }}</span>
-    <button class="btn" hx-post="/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp" hx-swap="innerHTML">RSVP</button>
+    <button class="btn" hx-post="/x/rsvp?date={{.ID}}" hx-target="closest .btn-rsvp" hx-swap="innerHTML">RSVP</button>
     {{end}}
 </div>
 
