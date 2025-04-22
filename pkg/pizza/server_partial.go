@@ -232,7 +232,8 @@ func (s *Server) HandleFridayEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fridayTime, err := parseFridayTime(r.PathValue("ID"))
+	fridayID := r.PathValue("ID")
+	fridayTime, err := parseFridayTime(fridayID)
 	if err != nil {
 		s.executeTemplate(w, "RSVPFail", nil)
 		return
@@ -252,6 +253,12 @@ func (s *Server) HandleFridayEnable(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	friday.Enabled = true
+
+	if s.config.Calendar.Enabled {
+		if err = s.calendar.ActivateEvent(fridayID); err != nil {
+			slog.Warn("failed to activate event", "friday", fridayID, "err", err)
+		}
+	}
 
 	if err = s.store.UpdateFriday(*friday); err != nil {
 		slog.Info("update friday failed", "err", err)
