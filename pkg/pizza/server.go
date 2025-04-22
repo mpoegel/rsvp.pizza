@@ -77,6 +77,7 @@ func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /logout", s.HandleLogout)
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(s.config.StaticDir))))
+	mux.Handle("GET /favicon/", http.FileServer(http.Dir(s.config.StaticDir)))
 
 	mux.HandleFunc("GET /x/friday/{ID}", s.HandleFriday)
 	mux.HandleFunc("POST /x/rsvp", s.HandleRSVP)

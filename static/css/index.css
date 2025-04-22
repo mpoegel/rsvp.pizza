@@ -25,9 +25,13 @@ a {
 
 .guest-level {
     text-align: left;
-    /* width: 75%; */
     display: flex;
-    /* cursor: pointer; */
+    flex-wrap: wrap;
+    padding-bottom: 10px
+}
+
+.guest {
+    margin-bottom: -10px;
 }
 
 .guest-box {
@@ -52,7 +56,7 @@ a {
     display: flex;
     flex-direction: column;
     animation-duration: 2s;
-    /* cursor: pointer; */
+    padding-bottom: 20px
 }
 
 .guest-expanded {
@@ -173,6 +177,7 @@ a {
 
     #new-friday-list .new-friday-time {
         min-height: 100%;
+        padding: 0px 5px;
     }
 
     .friday-link {
