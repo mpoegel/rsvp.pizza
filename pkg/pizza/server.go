@@ -208,7 +208,9 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		}
 		data.FridayTimes = make([]IndexFridayData, 0)
 		for _, friday := range fridays {
-			if claims.HasRole("pizza_host") || friday.Group == nil || (friday.Group != nil && claims.InGroup(*friday.Group)) {
+			if claims.HasRole("pizza_host") ||
+				(friday.Enabled && friday.Group == nil) ||
+				(friday.Enabled && friday.Group != nil && claims.InGroup(*friday.Group)) {
 				// skip friday when the user is not in the invited group unless they are the host
 				fData := s.newIndexFridayData(&friday, claims)
 				data.FridayTimes = append(data.FridayTimes, *fData)
