@@ -199,6 +199,9 @@ a {
 
     }
 
+    .pixel-pizza {
+        font-size: 11px !important;
+    }
 }
 
 #header-bar {
@@ -322,4 +325,5 @@ img.rsvp-status-no {
     #friday-table {
         width: 50%;
     }
+
 }
