@@ -373,7 +373,7 @@ func (s *Server) loadAllFridays() ([]Friday, error) {
 func (s *Server) newIndexFridayData(friday *Friday, claims *TokenClaims) *IndexFridayData {
 	fData := IndexFridayData{
 		MaxGuests:  friday.MaxGuests,
-		ShortDate:  fmt.Sprintf("%s %d", friday.Date.Month().String(), friday.Date.Day()),
+		ShortDate:  fmt.Sprintf("%s %d", getShortMonth(friday.Date.Month()), friday.Date.Day()),
 		CanEdit:    claims.HasRole("pizza_host"),
 		CanPlusOne: claims.HasRole("pizza_host") || claims.HasRole("plusOne"),
 		Active:     friday.Enabled,
@@ -458,4 +458,35 @@ func getFutureFridays() []time.Time {
 
 func getToast(msg string) []byte {
 	return []byte(fmt.Sprintf(`<span class="toast">%s</span>`, msg))
+}
+
+func getShortMonth(month time.Month) string {
+	switch month {
+	case time.January:
+		return "Jan"
+	case time.February:
+		return "Feb"
+	case time.March:
+		return "March"
+	case time.April:
+		return "April"
+	case time.May:
+		return "May"
+	case time.June:
+		return "June"
+	case time.July:
+		return "July"
+	case time.August:
+		return "Aug"
+	case time.September:
+		return "Sept"
+	case time.October:
+		return "Oct"
+	case time.November:
+		return "Nov"
+	case time.December:
+		return "Dec"
+	default:
+		return ""
+	}
 }
