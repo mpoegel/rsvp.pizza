@@ -1,34 +1,60 @@
+{{define "Wrapped"}}
 <!DOCTYPE html>
 <html>
 
 <head>
     <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="stylesheet" href="/static/css/wrapped.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
-    <h2>Pizza Wrapped</h2>
+    <h2>{{.Year}} Pizza Wrapped</h2>
 
-    {{if not .Name}}
-    <form method="get" action="/wrapped">
-        <label for="email">Email</label>
-        <input type="text" id="email" name="email" />
-        <br>
-        <div id="submit">
-            <input type="submit" value="Submit">
-        </div>
-    </form>
+    {{if .LoggedIn}}
+    {{if .IsAvailable}}
+    <main class="card">
+        <header class="card-header">
+            <div class="logo" aria-hidden="true">
+                <img width="64" src="/static/images/lovestruck_pizza.webp" />
+            </div>
+            <div>
+                <div class="title">Pizza Friday — Loyalty Card</div>
+                <div class="subtitle">Eat {{len .Attendance}} pizzas, get the {{ .TotalPunches }}th FREE!</div>
+            </div>
+        </header>
+
+        <section class="card-body">
+            <div class="punch-grid">
+                {{range $i, $date := .Attendance}}
+                <div class="slot punched">
+                    <div class="index">{{$date}}</div>
+                    <div class="pizza" aria-hidden="true">🍕</div>
+                </div>
+                {{end}}
+
+                <div class="slot free">
+                    <div class="pizza" aria-hidden="true">
+                        <img src="/static/images/happy_pizza.webp" width="64px" alt="happy_pizza">
+                    </div>
+                    <div class="label" aria-hidden="true">FREE</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <p>Congratulations! Your next pizza is free!</p>
+    <br><br><br>
+    <a href="/pizza">pizza</a> |
+    <a href="/logout">logout</a>
     {{else}}
-    <p>Hi {{.Name}}</p>
-    <p>Of the {{.TotalFridays}} Pizza Fridays this year, you joined for {{len .Attendance}}!</p>
-
-    {{range .Attendance}}
-    <img width="32" src="/static/images/pizza.png" title="{{.}}" />
+    <p>Sorry, Pizza Wrapped is not yet available. Check back soon!</p>
     {{end}}
-
-    <p>Here's to even more pizza next year!</p>
+    {{else}}
+    <a href="/login">login</a>
 
     {{end}}
 </body>
 
 </html>
+{{end}}

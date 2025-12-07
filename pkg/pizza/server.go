@@ -71,6 +71,7 @@ func NewServer(config Config, accessor Accessor, calendar Calendar, auth Authent
 
 func (s *Server) LoadRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /{$}", s.HandleIndex)
+	mux.HandleFunc("GET /pizza", s.HandlePizzaIndex)
 	mux.HandleFunc("GET /wrapped", s.HandledWrapped)
 	mux.HandleFunc("GET /login", s.HandleLogin)
 	mux.HandleFunc("GET /login/callback", s.HandleLoginCallback)
@@ -173,6 +174,16 @@ type PageData struct {
 }
 
 func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
+	s.indexGetMetric.Increment()
+
+	if IsTimeForWrapped() {
+		http.Redirect(w, r, "/wrapped", http.StatusTemporaryRedirect)
+	} else {
+		s.HandlePizzaIndex(w, r)
+	}
+}
+
+func (s *Server) HandlePizzaIndex(w http.ResponseWriter, r *http.Request) {
 	s.indexGetMetric.Increment()
 
 	data := PageData{

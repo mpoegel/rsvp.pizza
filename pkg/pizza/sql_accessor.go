@@ -312,6 +312,33 @@ func (a *SQLAccessor) RemoveFriendFromFriday(email string, date time.Time) error
 	return err
 }
 
+func (a *SQLAccessor) GetFridaysInYear(year int) ([]Friday, error) {
+	stmt, err := a.db.Prepare("SELECT * FROM fridays WHERE CAST(strftime('%Y', start_time) AS INTEGER) = ? AND enabled=1 ORDER BY start_time")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := stmt.Query(year)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]Friday, 0)
+	loc, _ := time.LoadLocation("America/New_York")
+	defer rows.Close()
+	for rows.Next() {
+		var friday Friday
+		var rawInvited string
+		if err = rows.Scan(&friday.Date, &friday.Group, &friday.Details, &rawInvited, &friday.MaxGuests, &friday.Enabled); err != nil {
+			return nil, err
+		}
+		friday.Date = friday.Date.In(loc)
+		if err = json.Unmarshal([]byte(rawInvited), &friday.Guests); err != nil {
+			return nil, err
+		}
+		res = append(res, friday)
+	}
+	return res, nil
+}
+
 func (a *SQLAccessor) GetPreferences(email string) (Preferences, error) {
 	var prefs Preferences
 	stmt, err := a.db.Prepare("SELECT preferences FROM friends WHERE email=?")

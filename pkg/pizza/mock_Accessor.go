@@ -318,6 +318,64 @@ func (_c *MockAccessor_GetFriday_Call) RunAndReturn(run func(time.Time) (Friday,
 	return _c
 }
 
+// GetFridaysInYear provides a mock function with given fields: year
+func (_m *MockAccessor) GetFridaysInYear(year int) ([]Friday, error) {
+	ret := _m.Called(year)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFridaysInYear")
+	}
+
+	var r0 []Friday
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]Friday, error)); ok {
+		return rf(year)
+	}
+	if rf, ok := ret.Get(0).(func(int) []Friday); ok {
+		r0 = rf(year)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]Friday)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(year)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAccessor_GetFridaysInYear_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFridaysInYear'
+type MockAccessor_GetFridaysInYear_Call struct {
+	*mock.Call
+}
+
+// GetFridaysInYear is a helper method to define mock.On call
+//   - year int
+func (_e *MockAccessor_Expecter) GetFridaysInYear(year interface{}) *MockAccessor_GetFridaysInYear_Call {
+	return &MockAccessor_GetFridaysInYear_Call{Call: _e.mock.On("GetFridaysInYear", year)}
+}
+
+func (_c *MockAccessor_GetFridaysInYear_Call) Run(run func(year int)) *MockAccessor_GetFridaysInYear_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockAccessor_GetFridaysInYear_Call) Return(_a0 []Friday, _a1 error) *MockAccessor_GetFridaysInYear_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAccessor_GetFridaysInYear_Call) RunAndReturn(run func(int) ([]Friday, error)) *MockAccessor_GetFridaysInYear_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetFriendByEmail provides a mock function with given fields: email
 func (_m *MockAccessor) GetFriendByEmail(email string) (Friend, error) {
 	ret := _m.Called(email)
