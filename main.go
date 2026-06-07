@@ -19,7 +19,7 @@ func main() {
 	var err error
 	switch args[1] {
 	case "run":
-		pizza.Run(os.Args[2:])
+		err = pizza.Run(os.Args[2:])
 	case "patch":
 		pizza.Patch(os.Args[2:])
 	default:
